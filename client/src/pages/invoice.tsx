@@ -1,152 +1,128 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Download } from "lucide-react";
-import { type CartItem, type InsertInvoice, type Invoice, cartItemSchema } from "@shared/schema";
+import {
+  Plus,
+  ShoppingCart,
+  Trash2,
+  ArrowRight,
+  ArrowLeft,
+} from "lucide-react";
+import { type Medicine, type CartItem } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { generateInvoicePDF } from "@/lib/pdfGenerator";
-import { apiRequest } from "@/lib/queryClient";
-import { z } from "zod";
 
-export default function Invoice() {
+export default function Home() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [selectedMedicineId, setSelectedMedicineId] = useState<string>("");
+  const [quantity, setQuantity] = useState<string>("1");
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [clientName, setClientName] = useState("");
-  const [clientAddress, setClientAddress] = useState("");
-  const [clientPhone, setClientPhone] = useState("");
 
-  const createInvoiceMutation = useMutation({
-    mutationFn: async (invoiceData: InsertInvoice) => {
-      return await apiRequest("POST", "/api/invoices", invoiceData);
-    },
-    onSuccess: () => {
-      console.log("Invoice saved to backend successfully");
-    },
-    onError: (error: Error) => {
-      console.error("Failed to save invoice to backend:", error);
-      toast({
-        title: "Backend Error",
-        description: "Failed to save invoice to server",
-        variant: "destructive",
-      });
-    },
+  const { data: medicines, isLoading } = useQuery<Medicine[]>({
+    queryKey: ["/api/medicines"],
   });
 
-  useEffect(() => {
-    const savedCart = localStorage.getItem("invoiceCart");
-    if (savedCart) {
-      try {
-        const parsedCart = JSON.parse(savedCart);
-        const validatedCart = z.array(cartItemSchema).parse(parsedCart);
-        setCart(validatedCart);
-      } catch (error) {
-        console.error("Invalid cart data:", error);
-        toast({
-          title: "Invalid Cart Data",
-          description: "Cart data is corrupted. Redirecting to home page.",
-          variant: "destructive",
-        });
-        localStorage.removeItem("invoiceCart");
-        setTimeout(() => setLocation("/"), 2000);
-      }
-    } else {
+  const handleAddToCart = () => {
+    if (!selectedMedicineId) {
       toast({
-        title: "No Items Found",
-        description: "Redirecting to home page",
-        variant: "destructive",
-      });
-      setTimeout(() => setLocation("/"), 2000);
-    }
-  }, [setLocation, toast]);
-
-  const subtotal = cart.reduce((sum, item) => sum + item.amount, 0);
-  const taxPercentage = 5;
-  const taxAmount = subtotal * (taxPercentage / 100);
-  const totalDue = subtotal + taxAmount;
-
-  const billNumber = `INV-${Date.now()}`;
-  const issueDate = new Date().toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-
-  const handleDownloadPDF = async () => {
-    if (!clientName || !clientAddress || !clientPhone) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all client details",
+        title: "Selection Required",
+        description: "Please select a medicine",
         variant: "destructive",
       });
       return;
     }
 
-    toast({
-      title: "Generating Invoice",
-      description: "Saving invoice and preparing PDF...",
-    });
-
-    try {
-      const invoiceData: InsertInvoice = {
-        billNumber,
-        issueDate,
-        clientName,
-        clientAddress,
-        clientPhone,
-        items: cart,
-        subtotal: subtotal.toString(),
-        taxPercentage: taxPercentage.toString(),
-        taxAmount: taxAmount.toString(),
-        totalDue: totalDue.toString(),
-      };
-
-      const savedInvoice = await createInvoiceMutation.mutateAsync(invoiceData) as Invoice;
-
-      if (!savedInvoice || !savedInvoice.id) {
-        throw new Error("Invoice was not saved properly");
-      }
-
-      generateInvoicePDF({
-        clientName,
-        clientAddress,
-        clientPhone,
-        items: cart,
-        billNumber,
-        issueDate,
-        subtotal,
-        taxPercentage,
-        taxAmount,
-        totalDue,
-      });
-
+    const quantityNum = parseInt(quantity);
+    if (isNaN(quantityNum) || quantityNum < 1) {
       toast({
-        title: "Success!",
-        description: "Invoice saved and PDF downloaded successfully",
-      });
-
-      localStorage.removeItem("invoiceCart");
-    } catch (error) {
-      console.error("Invoice generation error:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate invoice. Please try again.",
+        title: "Invalid Quantity",
+        description: "Please enter a valid quantity (minimum 1)",
         variant: "destructive",
       });
+      return;
     }
+
+    const medicine = medicines?.find((m) => m.id === selectedMedicineId);
+    if (!medicine) return;
+
+    const existingItemIndex = cart.findIndex(
+      (item) => item.medicineId === selectedMedicineId
+    );
+
+    if (existingItemIndex >= 0) {
+      const updatedCart = [...cart];
+      updatedCart[existingItemIndex].quantity += quantityNum;
+      updatedCart[existingItemIndex].amount =
+        updatedCart[existingItemIndex].quantity *
+        updatedCart[existingItemIndex].rate;
+      setCart(updatedCart);
+      toast({
+        title: "Updated",
+        description: `${medicine.name} quantity updated in cart`,
+      });
+    } else {
+      const rate = parseFloat(medicine.price);
+      const newItem: CartItem = {
+        medicineId: medicine.id,
+        medicineName: medicine.name,
+        quantity: quantityNum,
+        rate,
+        amount: rate * quantityNum,
+      };
+      setCart([...cart, newItem]);
+      toast({
+        title: "Added to Cart",
+        description: `${medicine.name} added successfully`,
+      });
+    }
+
+    setSelectedMedicineId("");
+    setQuantity("1");
   };
 
+  const handleRemoveFromCart = (medicineId: string) => {
+    setCart(cart.filter((item) => item.medicineId !== medicineId));
+    toast({
+      title: "Removed",
+      description: "Item removed from cart",
+    });
+  };
+
+  const handleProceedToInvoice = () => {
+    if (cart.length === 0) {
+      toast({
+        title: "Empty Cart",
+        description: "Please add at least one medicine to proceed",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    localStorage.setItem("invoiceCart", JSON.stringify(cart));
+    setLocation("/generate-invoice");
+  };
+
+  const cartTotal = cart.reduce((sum, item) => sum + item.amount, 0);
   const handleGoBack = () => {
     setLocation("/");
   };
-
-  if (cart.length === 0) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-background pb-12">
@@ -162,196 +138,167 @@ export default function Invoice() {
             Back
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl md:text-3xl font-bold">Generate Invoice</h1>
+            <h1 className="text-2xl md:text-3xl font-bold">Invoice Creation</h1>
           </div>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Client Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-2 gap-6">
+      <div className="max-w-5xl mx-auto px-4 py-8 md:py-12">
+        <div className="grid md:grid-cols-2 gap-6 md:gap-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl">Select Medicines</CardTitle>
+              <CardDescription>
+                Choose medicine and quantity to add to your order
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="client-name">Client Name *</Label>
-                <Input
-                  id="client-name"
-                  data-testid="input-client-name"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  placeholder="Enter client name"
-                />
+                <Label
+                  htmlFor="medicine-select"
+                  className="text-sm font-medium"
+                >
+                  Medicine Name
+                </Label>
+                <Select
+                  value={selectedMedicineId}
+                  onValueChange={setSelectedMedicineId}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger
+                    id="medicine-select"
+                    data-testid="select-medicine"
+                    className="w-full"
+                  >
+                    <SelectValue
+                      placeholder={
+                        isLoading ? "Loading medicines..." : "Select a medicine"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {medicines?.map((medicine) => (
+                      <SelectItem key={medicine.id} value={medicine.id}>
+                        {medicine.name} - ₹
+                        {parseFloat(medicine.price).toFixed(2)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="client-phone">Phone Number *</Label>
+                <Label htmlFor="quantity-input" className="text-sm font-medium">
+                  Quantity
+                </Label>
                 <Input
-                  id="client-phone"
-                  data-testid="input-client-phone"
-                  value={clientPhone}
-                  onChange={(e) => setClientPhone(e.target.value)}
-                  placeholder="Enter phone number"
-                  type="tel"
+                  id="quantity-input"
+                  data-testid="input-quantity"
+                  type="number"
+                  min="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  className="w-full"
+                  placeholder="Enter quantity"
                 />
               </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="client-address">Address *</Label>
-                <Input
-                  id="client-address"
-                  data-testid="input-client-address"
-                  value={clientAddress}
-                  onChange={(e) => setClientAddress(e.target.value)}
-                  placeholder="Enter client address"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              <Button
+                onClick={handleAddToCart}
+                disabled={isLoading}
+                className="w-full"
+                size="lg"
+                data-testid="button-add-medicine"
+              >
+                <Plus className="h-5 w-5" />
+                Add to Cart
+              </Button>
+            </CardContent>
+          </Card>
 
-        <Card id="invoice-preview">
-          <div className="bg-primary text-primary-foreground px-6 py-8 rounded-t-xl">
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-              <div className="flex-1">
-                <h2 className="text-2xl md:text-3xl font-bold leading-tight">
-                  MALKANI HEALTH OF ELECTROHOMEOPATHY & RESEARCH CENTRE
-                </h2>
-                <p className="text-sm mt-2 text-primary-foreground/90">
-                  (64, Street No. 2, Vill- Sadipur Delhi 110094.)
-                </p>
-                <p className="text-xs mt-1 text-primary-foreground/80">GSTIN: _______________</p>
-              </div>
-            </div>
-          </div>
-
-          <CardContent className="p-6">
-            <div className="text-center mb-6">
-              <h3 className="text-3xl font-bold">INVOICE</h3>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
-              <div>
-                <h4 className="font-semibold text-sm text-muted-foreground mb-2">BILL TO:</h4>
-                <div className="space-y-1 text-sm">
-                  <p className="font-medium" data-testid="text-invoice-client-name">{clientName || "_______________"}</p>
-                  <p className="text-muted-foreground">{clientAddress || "_______________"}</p>
-                  <p className="text-muted-foreground">{clientPhone || "_______________"}</p>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-2xl">
+                <ShoppingCart className="h-6 w-6" />
+                Cart Summary
+              </CardTitle>
+              <CardDescription>
+                {cart.length === 0
+                  ? "No items added yet"
+                  : `${cart.length} item${cart.length > 1 ? "s" : ""} in cart`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {cart.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">Your cart is empty</p>
+                  <p className="text-xs mt-1">Add medicines to get started</p>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                    {cart.map((item) => (
+                      <div
+                        key={item.medicineId}
+                        data-testid={`cart-item-${item.medicineId}`}
+                        className="flex items-start justify-between gap-3 p-3 rounded-lg bg-muted/50 border border-border"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">
+                            {item.medicineName}
+                          </p>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                            <span>Qty: {item.quantity}</span>
+                            <span>×</span>
+                            <span>₹{item.rate.toFixed(2)}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm whitespace-nowrap">
+                            ₹{item.amount.toFixed(2)}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              handleRemoveFromCart(item.medicineId)
+                            }
+                            data-testid={`button-remove-${item.medicineId}`}
+                            className="h-8 w-8 text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
 
-              <div className="md:text-right">
-                <div className="space-y-1 text-sm">
-                  <div className="flex md:justify-end gap-2">
-                    <span className="text-muted-foreground">Bill No:</span>
-                    <span className="font-medium" data-testid="text-bill-number">{billNumber}</span>
-                  </div>
-                  <div className="flex md:justify-end gap-2">
-                    <span className="text-muted-foreground">Issue Date:</span>
-                    <span className="font-medium">{issueDate}</span>
-                  </div>
-                  <div className="flex md:justify-end gap-2">
-                    <span className="text-muted-foreground">Total Amount Due:</span>
-                    <span className="font-bold text-primary">₹{totalDue.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+                  <div className="pt-4 border-t border-border">
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="text-lg font-semibold">Total</span>
+                      <span
+                        className="text-2xl font-bold text-primary"
+                        data-testid="text-cart-total"
+                      >
+                        ₹{cartTotal.toFixed(2)}
+                      </span>
+                    </div>
 
-            <div className="overflow-x-auto mb-6">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-primary text-primary-foreground">
-                    <th className="text-left px-4 py-3 font-semibold">Description</th>
-                    <th className="text-center px-4 py-3 font-semibold">Quantity</th>
-                    <th className="text-right px-4 py-3 font-semibold">Rate(Rs.)</th>
-                    <th className="text-right px-4 py-3 font-semibold">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {cart.map((item, index) => (
-                    <tr
-                      key={item.medicineId}
-                      data-testid={`invoice-item-${index}`}
-                      className={index % 2 === 0 ? "bg-muted/30" : ""}
+                    <Button
+                      onClick={handleProceedToInvoice}
+                      className="w-full"
+                      size="lg"
+                      data-testid="button-proceed"
                     >
-                      <td className="px-4 py-3 border-b border-border">{item.medicineName}</td>
-                      <td className="text-center px-4 py-3 border-b border-border">{item.quantity}</td>
-                      <td className="text-right px-4 py-3 border-b border-border">₹{item.rate.toFixed(2)}</td>
-                      <td className="text-right px-4 py-3 border-b border-border font-medium">
-                        ₹{item.amount.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex justify-end mb-8">
-              <div className="w-full md:w-1/2 space-y-3">
-                <div className="flex justify-between items-center pb-2">
-                  <span className="text-muted-foreground">Sub Total</span>
-                  <span className="font-medium" data-testid="text-subtotal">₹{subtotal.toFixed(2)}</span>
+                      Proceed to Invoice
+                      <ArrowRight className="h-5 w-5" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center pb-2">
-                  <span className="text-muted-foreground">Tax {taxPercentage}%</span>
-                  <span className="font-medium">₹{taxAmount.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center pt-2 border-t-2 border-primary">
-                  <span className="text-lg font-semibold">Total Due</span>
-                  <span className="text-xl font-bold text-primary" data-testid="text-total-due">
-                    ₹{totalDue.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-border pt-6 space-y-4">
-              <div>
-                <h4 className="font-semibold text-sm mb-2">Our Payment Methods:</h4>
-                <p className="text-sm text-muted-foreground">Bank, BHIM #, PhonePe, Google Pay, NetBanking</p>
-              </div>
-
-              <div>
-                <h4 className="font-semibold text-sm mb-2">NOTES:</h4>
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <p>Goods once sold will not be returned.</p>
-                  <p>All disputes shall be subject to Delhi jurisdiction</p>
-                  <p>Please feel free to contact us in case of any question you may have!</p>
-                </div>
-              </div>
-
-              <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 pt-4">
-                <div className="text-xs text-muted-foreground">
-                  <p className="font-medium mb-1">Thank you for your time & business!</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold text-sm">Dr. Suresh Malkani</p>
-                  <p className="text-xs text-muted-foreground">Authorized Signer</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-
-          <div className="bg-primary text-primary-foreground px-6 py-3 rounded-b-xl text-center">
-            <p className="text-xs">
-              malkani.clinic@gmail.com | +91-9839239874 | +91-8800100378 | www.electrohomeopathy.in
-            </p>
-          </div>
-        </Card>
-
-        <div className="flex justify-center mt-8">
-          <Button
-            onClick={handleDownloadPDF}
-            disabled={createInvoiceMutation.isPending || !clientName || !clientAddress || !clientPhone}
-            size="lg"
-            className="px-8"
-            data-testid="button-download-pdf"
-          >
-            <Download className="h-5 w-5" />
-            {createInvoiceMutation.isPending ? "Generating PDF..." : "Download PDF"}
-          </Button>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

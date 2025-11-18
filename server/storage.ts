@@ -1,4 +1,9 @@
-import { type Medicine, type InsertMedicine, type Invoice, type InsertInvoice } from "@shared/schema";
+import {
+  type Medicine,
+  type InsertMedicine,
+  type Invoice,
+  type InsertInvoice,
+} from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -46,13 +51,17 @@ export class MemStorage implements IStorage {
 
     sampleMedicines.forEach((medicine) => {
       const id = randomUUID();
-      const newMedicine: Medicine = { ...medicine, id };
+      const newMedicine: Medicine = {
+        ...medicine,
+        id,
+        stockQuantity: medicine.stockQuantity ?? 0,
+      };
       this.medicines.set(id, newMedicine);
     });
   }
 
   async getAllMedicines(): Promise<Medicine[]> {
-    return Array.from(this.medicines.values()).sort((a, b) => 
+    return Array.from(this.medicines.values()).sort((a, b) =>
       a.name.localeCompare(b.name)
     );
   }
@@ -63,7 +72,11 @@ export class MemStorage implements IStorage {
 
   async createMedicine(insertMedicine: InsertMedicine): Promise<Medicine> {
     const id = randomUUID();
-    const medicine: Medicine = { ...insertMedicine, id };
+    const medicine: Medicine = {
+      ...insertMedicine,
+      id,
+      stockQuantity: insertMedicine.stockQuantity ?? 0,
+    };
     this.medicines.set(id, medicine);
     return medicine;
   }
@@ -78,10 +91,22 @@ export class MemStorage implements IStorage {
       clientAddress: insertInvoice.clientAddress,
       clientPhone: insertInvoice.clientPhone,
       items: insertInvoice.items,
-      subtotal: typeof insertInvoice.subtotal === 'string' ? insertInvoice.subtotal : insertInvoice.subtotal.toString(),
-      taxPercentage: typeof insertInvoice.taxPercentage === 'string' ? insertInvoice.taxPercentage : insertInvoice.taxPercentage.toString(),
-      taxAmount: typeof insertInvoice.taxAmount === 'string' ? insertInvoice.taxAmount : insertInvoice.taxAmount.toString(),
-      totalDue: typeof insertInvoice.totalDue === 'string' ? insertInvoice.totalDue : insertInvoice.totalDue.toString(),
+      subtotal:
+        typeof insertInvoice.subtotal === "string"
+          ? insertInvoice.subtotal
+          : String(insertInvoice.subtotal),
+      taxPercentage:
+        typeof insertInvoice.taxPercentage === "string"
+          ? insertInvoice.taxPercentage
+          : String(insertInvoice.taxPercentage),
+      taxAmount:
+        typeof insertInvoice.taxAmount === "string"
+          ? insertInvoice.taxAmount
+          : String(insertInvoice.taxAmount),
+      totalDue:
+        typeof insertInvoice.totalDue === "string"
+          ? insertInvoice.totalDue
+          : String(insertInvoice.totalDue),
       createdAt: new Date(),
     };
     this.invoices.set(id, invoice);
@@ -93,8 +118,9 @@ export class MemStorage implements IStorage {
   }
 
   async getAllInvoices(): Promise<Invoice[]> {
-    return Array.from(this.invoices.values()).sort((a, b) => 
-      new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
+    return Array.from(this.invoices.values()).sort(
+      (a, b) =>
+        new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
     );
   }
 }

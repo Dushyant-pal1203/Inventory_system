@@ -6,12 +6,16 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/home";
 import Invoice from "@/pages/invoice";
 import NotFound from "@/pages/not-found";
+import Inventory from "./pages/inventory";
+import GenerateInvoice from "./pages/generate_invoice";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/invoice" component={Invoice} />
+      <Route path="/inventory" component={Inventory} />
+      <Route path="/generate-invoice" component={GenerateInvoice} />
       <Route component={NotFound} />
     </Switch>
   );
