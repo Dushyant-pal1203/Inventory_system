@@ -1,10 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertInvoiceSchema } from "@shared/schema";
+import { insertInvoiceSchema, insertMedicineSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Medicine routes
   app.get("/api/medicines", async (req, res) => {
     try {
       const medicines = await storage.getAllMedicines();
@@ -19,11 +20,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const medicine = await storage.getMedicine(id);
-      
+
       if (!medicine) {
         return res.status(404).json({ error: "Medicine not found" });
       }
-      
+
       res.json(medicine);
     } catch (error) {
       console.error("Error fetching medicine:", error);
@@ -31,6 +32,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ADD THIS ROUTE - Create new medicine
+  app.post("/api/medicines", async (req, res) => {
+    try {
+      const validatedData = insertMedicineSchema.parse(req.body);
+      const medicine = await storage.createMedicine(validatedData);
+      res.status(201).json(medicine);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Validation failed",
+          details: error.errors,
+        });
+      }
+      console.error("Error creating medicine:", error);
+      res.status(500).json({ error: "Failed to create medicine" });
+    }
+  });
+
+  // ADD THIS ROUTE - Delete medicine
+  app.delete("/api/medicines/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteMedicine(id);
+
+      if (!success) {
+        return res.status(404).json({ error: "Medicine not found" });
+      }
+
+      res.status(200).json({ message: "Medicine deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting medicine:", error);
+      res.status(500).json({ error: "Failed to delete medicine" });
+    }
+  });
+
+  // Invoice routes (existing)
   app.post("/api/invoices", async (req, res) => {
     try {
       const validatedData = insertInvoiceSchema.parse(req.body);
@@ -38,9 +75,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(invoice);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
-          error: "Validation failed", 
-          details: error.errors 
+        return res.status(400).json({
+          error: "Validation failed",
+          details: error.errors,
         });
       }
       console.error("Error creating invoice:", error);
@@ -52,11 +89,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const invoice = await storage.getInvoice(id);
-      
+
       if (!invoice) {
         return res.status(404).json({ error: "Invoice not found" });
       }
-      
+
       res.json(invoice);
     } catch (error) {
       console.error("Error fetching invoice:", error);

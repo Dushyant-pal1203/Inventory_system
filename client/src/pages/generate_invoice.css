@@ -1,0 +1,16 @@
+/* Watermark */
+.watermark {
+    position: absolute;
+    inset: 0;
+    top: 900px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.watermark img {
+    width: 280px;
+    opacity: 0.1;
+    user-select: none;
+}

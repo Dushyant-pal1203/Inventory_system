@@ -125,8 +125,8 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-12">
-      <div className="bg-primary text-primary-foreground py-6 px-4 shadow-md">
+    <div className="min-h-[86.1vh] bg-background pb-12 sm:min-h-auto">
+      <div className="bg-primary text-primary-foreground py-6 px-4 shadow-md fixed top-0 left-0 w-full z-10">
         <div className="max-w-5xl mx-auto flex items-center gap-4">
           <Button
             variant="ghost"
@@ -143,7 +143,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-8 md:py-12">
+      <div className="max-w-5xl mx-auto px-4 py-8 md:py-12 mt-[70px]">
         <div className="grid md:grid-cols-2 gap-6 md:gap-8">
           <Card>
             <CardHeader>

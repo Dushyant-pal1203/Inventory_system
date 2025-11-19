@@ -8,6 +8,8 @@ import Invoice from "@/pages/invoice";
 import NotFound from "@/pages/not-found";
 import Inventory from "./pages/inventory";
 import GenerateInvoice from "./pages/generate_invoice";
+// import Banner from "./components/banner";
+import Footer from "./components/footer";
 
 function Router() {
   return (
@@ -23,12 +25,15 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </QueryClientProvider>
+      <Footer />
+    </>
   );
 }
 

@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { generateInvoicePDF } from "@/lib/pdfGenerator";
 import { apiRequest } from "@/lib/queryClient";
 import { z } from "zod";
+import "./generate_invoice.css";
 
 export default function GenerateInvoice() {
   const [, setLocation] = useLocation();
@@ -83,6 +84,8 @@ export default function GenerateInvoice() {
     year: "numeric",
   });
 
+  // Replace your handleDownloadPDF function with this updated version:
+
   const handleDownloadPDF = async () => {
     if (!clientName || !clientAddress || !clientPhone) {
       toast({
@@ -120,7 +123,8 @@ export default function GenerateInvoice() {
         throw new Error("Invoice was not saved properly");
       }
 
-      generateInvoicePDF({
+      // Call the async generateInvoicePDF function
+      await generateInvoicePDF({
         clientName,
         clientAddress,
         clientPhone,
@@ -226,6 +230,11 @@ export default function GenerateInvoice() {
         <Card id="invoice-preview">
           <div className="bg-primary text-primary-foreground px-6 py-8 rounded-t-xl">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+              <img
+                src="images/logo.png"
+                alt="Logo"
+                className="w-[110px] h-fit"
+              />
               <div className="flex-1">
                 <h2 className="text-2xl md:text-3xl font-bold leading-tight">
                   MALKANI HEALTH OF ELECTROHOMEOPATHY & RESEARCH CENTRE
@@ -247,7 +256,10 @@ export default function GenerateInvoice() {
             <div className="text-center mb-6">
               <h3 className="text-3xl font-bold">INVOICE</h3>
             </div>
-
+            {/* Watermark */}
+            <div className="watermark">
+              <img src="images/logo.png" alt="Watermark" />
+            </div>
             <div className="grid md:grid-cols-2 gap-6 mb-8">
               <div>
                 <h4 className="font-semibold text-sm text-muted-foreground mb-2">

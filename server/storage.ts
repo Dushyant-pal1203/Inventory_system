@@ -10,6 +10,7 @@ export interface IStorage {
   getAllMedicines(): Promise<Medicine[]>;
   getMedicine(id: string): Promise<Medicine | undefined>;
   createMedicine(medicine: InsertMedicine): Promise<Medicine>;
+  deleteMedicine(id: string): Promise<boolean>; // Make sure this exists
   createInvoice(invoice: InsertInvoice): Promise<Invoice>;
   getInvoice(id: string): Promise<Invoice | undefined>;
   getAllInvoices(): Promise<Invoice[]>;
@@ -122,6 +123,9 @@ export class MemStorage implements IStorage {
       (a, b) =>
         new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
     );
+  }
+  async deleteMedicine(id: string): Promise<boolean> {
+    return this.medicines.delete(id);
   }
 }
 

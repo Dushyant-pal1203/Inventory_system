@@ -1,11 +1,21 @@
-import { pgTable, text, varchar, integer, decimal, timestamp, json } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  varchar,
+  integer,
+  decimal,
+  timestamp,
+  json,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
 
 // Medicine table schema
 export const medicines = pgTable("medicines", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   stockQuantity: integer("stock_quantity").notNull().default(0),
@@ -31,7 +41,9 @@ export type CartItem = z.infer<typeof cartItemSchema>;
 
 // Invoice table schema for persistence
 export const invoices = pgTable("invoices", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
   billNumber: text("bill_number").notNull().unique(),
   issueDate: text("issue_date").notNull(),
   clientName: text("client_name").notNull(),
@@ -39,7 +51,10 @@ export const invoices = pgTable("invoices", {
   clientPhone: text("client_phone").notNull(),
   items: json("items").$type<CartItem[]>().notNull(),
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
-  taxPercentage: decimal("tax_percentage", { precision: 5, scale: 2 }).notNull(),
+  taxPercentage: decimal("tax_percentage", {
+    precision: 5,
+    scale: 2,
+  }).notNull(),
   taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).notNull(),
   totalDue: decimal("total_due", { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -51,7 +66,9 @@ export const insertInvoiceSchema = z.object({
   clientName: z.string().min(1, "Client name is required"),
   clientAddress: z.string().min(1, "Client address is required"),
   clientPhone: z.string().min(10, "Valid phone number is required"),
-  items: z.array(cartItemSchema).min(1, "At least one medicine must be selected"),
+  items: z
+    .array(cartItemSchema)
+    .min(1, "At least one medicine must be selected"),
   subtotal: z.string(),
   taxPercentage: z.string(),
   taxAmount: z.string(),
