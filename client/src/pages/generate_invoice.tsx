@@ -25,21 +25,25 @@ export default function GenerateInvoice() {
   const [clientName, setClientName] = useState("");
   const [clientAddress, setClientAddress] = useState("");
   const [clientPhone, setClientPhone] = useState("");
+  const [invoiceGenerated, setInvoiceGenerated] = useState(false);
 
   const createInvoiceMutation = useMutation({
     mutationFn: async (invoiceData: InsertInvoice) => {
       const res = await apiRequest("POST", "/api/invoices", invoiceData);
-      const data = await res.json();
-      return data as Invoice;
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to create invoice");
+      }
+      return (await res.json()) as Invoice;
     },
-    onSuccess: () => {
-      console.log("Invoice saved to backend successfully");
+    onSuccess: (savedInvoice) => {
+      console.log("Invoice saved and stock updated successfully", savedInvoice);
     },
     onError: (error: Error) => {
-      console.error("Failed to save invoice to backend:", error);
+      console.error("Failed to save invoice:", error);
       toast({
-        title: "Backend Error",
-        description: "Failed to save invoice to server",
+        title: "Error",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -84,8 +88,7 @@ export default function GenerateInvoice() {
     year: "numeric",
   });
 
-  // Replace your handleDownloadPDF function with this updated version:
-
+  // In your generate_invoice.tsx, update the handleDownloadPDF function:
   const handleDownloadPDF = async () => {
     if (!clientName || !clientAddress || !clientPhone) {
       toast({
@@ -96,9 +99,11 @@ export default function GenerateInvoice() {
       return;
     }
 
+    console.log("Starting invoice generation with cart:", cart);
+
     toast({
       title: "Generating Invoice",
-      description: "Saving invoice and preparing PDF...",
+      description: "Updating stock and generating PDF...",
     });
 
     try {
@@ -115,15 +120,18 @@ export default function GenerateInvoice() {
         totalDue: totalDue.toString(),
       };
 
-      const savedInvoice = (await createInvoiceMutation.mutateAsync(
-        invoiceData
-      )) as Invoice;
+      console.log("Sending invoice data to backend:", invoiceData);
+
+      // First, create the invoice (this will deduct stock)
+      const savedInvoice = await createInvoiceMutation.mutateAsync(invoiceData);
+      console.log("Invoice created successfully:", savedInvoice);
 
       if (!savedInvoice || !savedInvoice.id) {
         throw new Error("Invoice was not saved properly");
       }
 
-      // Call the async generateInvoicePDF function
+      // Then generate the PDF
+      console.log("Generating PDF...");
       await generateInvoicePDF({
         clientName,
         clientAddress,
@@ -137,12 +145,22 @@ export default function GenerateInvoice() {
         totalDue,
       });
 
+      setInvoiceGenerated(true);
+
       toast({
         title: "Success!",
-        description: "Invoice saved and PDF downloaded successfully",
+        description:
+          "Invoice saved, stock updated, and PDF downloaded successfully",
       });
-
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      // Clear the cart from localStorage
       localStorage.removeItem("invoiceCart");
+      console.log("Cart cleared from localStorage");
+
+      // Force refresh the medicines list in other components
+      window.dispatchEvent(new Event("storageUpdate"));
     } catch (error) {
       console.error("Invoice generation error:", error);
       toast({
@@ -157,11 +175,23 @@ export default function GenerateInvoice() {
   };
 
   const handleGoBack = () => {
-    setLocation("/invoice");
+    if (!invoiceGenerated) {
+      // If invoice hasn't been generated yet, just go back
+      setLocation("/invoice");
+    } else {
+      // If invoice was generated, go to home
+      setLocation("/");
+    }
   };
 
-  if (cart.length === 0) {
-    return null;
+  if (cart.length === 0 && !invoiceGenerated) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">Loading invoice data...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -180,274 +210,317 @@ export default function GenerateInvoice() {
           <div className="flex-1">
             <h1 className="text-2xl md:text-3xl font-bold">Generate Invoice</h1>
           </div>
+          {invoiceGenerated && (
+            <div className="bg-green-600 px-3 py-1 rounded-full text-xs">
+              Stock Updated
+            </div>
+          )}
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-8">
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Client Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="client-name">
-                  Client Name <span className="text-red-600">*</span>
-                </Label>
-                <Input
-                  id="client-name"
-                  data-testid="input-client-name"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  placeholder="Enter client name"
-                />
-              </div>
+        {!invoiceGenerated ? (
+          <>
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Client Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="client-name">
+                      Client Name <span className="text-red-600">*</span>
+                    </Label>
+                    <Input
+                      id="client-name"
+                      data-testid="input-client-name"
+                      value={clientName}
+                      onChange={(e) => setClientName(e.target.value)}
+                      placeholder="Enter client name"
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="client-phone">
-                  Phone Number <span className="text-red-600">*</span>
-                </Label>
-                <Input
-                  id="client-phone"
-                  data-testid="input-client-phone"
-                  value={clientPhone}
-                  onChange={(e) => setClientPhone(e.target.value)}
-                  placeholder="Enter phone number"
-                  type="tel"
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="client-phone">
+                      Phone Number <span className="text-red-600">*</span>
+                    </Label>
+                    <Input
+                      id="client-phone"
+                      data-testid="input-client-phone"
+                      value={clientPhone}
+                      onChange={(e) => setClientPhone(e.target.value)}
+                      placeholder="Enter phone number"
+                      type="tel"
+                    />
+                  </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="client-address">
-                  Address <span className="text-red-600">*</span>
-                </Label>
-                <Input
-                  id="client-address"
-                  data-testid="input-client-address"
-                  value={clientAddress}
-                  onChange={(e) => setClientAddress(e.target.value)}
-                  placeholder="Enter client address"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card id="invoice-preview">
-          <div className="bg-primary text-primary-foreground px-6 py-8 rounded-t-xl">
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-              <img
-                src="images/logo.png"
-                alt="Logo"
-                className="w-[110px] h-fit"
-              />
-              <div className="flex-1">
-                <h2 className="text-2xl md:text-3xl font-bold leading-tight">
-                  MALKANI HEALTH OF ELECTROHOMEOPATHY & RESEARCH CENTRE
-                </h2>
-                <p className="text-sm mt-2 text-primary-foreground/90">
-                  (64, Street No. 2, Vill- Sadipur Delhi 110094.)
-                </p>
-                <p className="text-xs mt-1 text-primary-foreground/80">
-                  GSTIN:{" "}
-                  <span style={{ color: "white", fontWeight: 700 }}>
-                    07AHCPM0625Q1Z5
-                  </span>
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <CardContent className="p-6">
-            <div className="text-center mb-6">
-              <h3 className="text-3xl font-bold">INVOICE</h3>
-            </div>
-            {/* Watermark */}
-            <div className="watermark">
-              <img src="images/logo.png" alt="Watermark" />
-            </div>
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
-              <div>
-                <h4 className="font-semibold text-sm text-muted-foreground mb-2">
-                  BILL TO:
-                </h4>
-                <div className="space-y-1 text-sm">
-                  <p
-                    className="font-medium"
-                    data-testid="text-invoice-client-name"
-                  >
-                    {clientName || "_______________"}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {clientAddress || "_______________"}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {clientPhone || "_______________"}
-                  </p>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="client-address">
+                      Address <span className="text-red-600">*</span>
+                    </Label>
+                    <Input
+                      id="client-address"
+                      data-testid="input-client-address"
+                      value={clientAddress}
+                      onChange={(e) => setClientAddress(e.target.value)}
+                      placeholder="Enter client address"
+                    />
+                  </div>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              <div className="md:text-right">
-                <div className="space-y-1 text-sm">
-                  <div className="flex md:justify-end gap-2">
-                    <span className="text-muted-foreground">Bill No:</span>
-                    <span
-                      className="font-medium"
-                      data-testid="text-bill-number"
-                    >
-                      {billNumber}
-                    </span>
-                  </div>
-                  <div className="flex md:justify-end gap-2">
-                    <span className="text-muted-foreground">Issue Date:</span>
-                    <span className="font-medium">{issueDate}</span>
-                  </div>
-                  <div className="flex md:justify-end gap-2">
-                    <span className="text-muted-foreground">
-                      Total Amount Due:
-                    </span>
-                    <span className="font-bold text-primary">
-                      ₹{totalDue.toFixed(2)}
-                    </span>
+            {/* Your existing invoice preview component */}
+            <Card id="invoice-preview">
+              <div className="bg-primary text-primary-foreground px-6 py-8 rounded-t-xl">
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                  <img
+                    src="images/logo.png"
+                    alt="Logo"
+                    className="w-[110px] h-fit"
+                  />
+                  <div className="flex-1">
+                    <h2 className="text-2xl md:text-3xl font-bold leading-tight">
+                      MALKANI HEALTH OF ELECTROHOMEOPATHY & RESEARCH CENTRE
+                    </h2>
+                    <p className="text-sm mt-2 text-primary-foreground/90">
+                      (64, Street No. 2, Vill- Sadipur Delhi 110094.)
+                    </p>
+                    <p className="text-xs mt-1 text-primary-foreground/80">
+                      GSTIN:{" "}
+                      <span style={{ color: "white", fontWeight: 700 }}>
+                        07AHCPM0625Q1Z5
+                      </span>
+                    </p>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="overflow-x-auto mb-6">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-primary text-primary-foreground">
-                    <th className="text-left px-4 py-3 font-semibold">
-                      Description
-                    </th>
-                    <th className="text-center px-4 py-3 font-semibold">
-                      Quantity
-                    </th>
-                    <th className="text-right px-4 py-3 font-semibold">
-                      Rate(Rs.)
-                    </th>
-                    <th className="text-right px-4 py-3 font-semibold">
-                      Amount
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {cart.map((item, index) => (
-                    <tr
-                      key={item.medicineId}
-                      data-testid={`invoice-item-${index}`}
-                      className={index % 2 === 0 ? "bg-muted/30" : ""}
-                    >
-                      <td className="px-4 py-3 border-b border-border">
-                        {item.medicineName}
-                      </td>
-                      <td className="text-center px-4 py-3 border-b border-border">
-                        {item.quantity}
-                      </td>
-                      <td className="text-right px-4 py-3 border-b border-border">
-                        ₹{item.rate.toFixed(2)}
-                      </td>
-                      <td className="text-right px-4 py-3 border-b border-border font-medium">
-                        ₹{item.amount.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+              <CardContent className="p-6">
+                <div className="text-center mb-6">
+                  <h3 className="text-3xl font-bold">INVOICE</h3>
+                </div>
+                {/* Watermark */}
+                <div className="watermark">
+                  <img src="images/logo.png" alt="Watermark" />
+                </div>
+                <div className="grid md:grid-cols-2 gap-6 mb-8">
+                  <div>
+                    <h4 className="font-semibold text-sm text-muted-foreground mb-2">
+                      BILL TO:
+                    </h4>
+                    <div className="space-y-1 text-sm">
+                      <p
+                        className="font-medium"
+                        data-testid="text-invoice-client-name"
+                      >
+                        {clientName || "_______________"}
+                      </p>
+                      <p className="text-muted-foreground">
+                        {clientAddress || "_______________"}
+                      </p>
+                      <p className="text-muted-foreground">
+                        {clientPhone || "_______________"}
+                      </p>
+                    </div>
+                  </div>
 
-            <div className="flex justify-end mb-8">
-              <div className="w-full md:w-1/2 space-y-3">
-                <div className="flex justify-between items-center pb-2">
-                  <span className="text-muted-foreground">Sub Total</span>
-                  <span className="font-medium" data-testid="text-subtotal">
-                    ₹{subtotal.toFixed(2)}
-                  </span>
+                  <div className="md:text-right">
+                    <div className="space-y-1 text-sm">
+                      <div className="flex md:justify-end gap-2">
+                        <span className="text-muted-foreground">Bill No:</span>
+                        <span
+                          className="font-medium"
+                          data-testid="text-bill-number"
+                        >
+                          {billNumber}
+                        </span>
+                      </div>
+                      <div className="flex md:justify-end gap-2">
+                        <span className="text-muted-foreground">
+                          Issue Date:
+                        </span>
+                        <span className="font-medium">{issueDate}</span>
+                      </div>
+                      <div className="flex md:justify-end gap-2">
+                        <span className="text-muted-foreground">
+                          Total Amount Due:
+                        </span>
+                        <span className="font-bold text-primary">
+                          ₹{totalDue.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center pb-2">
-                  <span className="text-muted-foreground">
-                    Tax {taxPercentage}%
-                  </span>
-                  <span className="font-medium">₹{taxAmount.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center pt-2 border-t-2 border-primary">
-                  <span className="text-lg font-semibold">Total Due</span>
-                  <span
-                    className="text-xl font-bold text-primary"
-                    data-testid="text-total-due"
-                  >
-                    ₹{totalDue.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            </div>
 
-            <div className="border-t border-border pt-6 space-y-4">
-              <div>
-                <h4 className="font-semibold text-sm mb-2">
-                  Our Payment Methods:
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  Bank, BHIM #, PhonePe, Google Pay, NetBanking
+                <div className="overflow-x-auto mb-6">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-primary text-primary-foreground">
+                        <th className="text-left px-4 py-3 font-semibold">
+                          Description
+                        </th>
+                        <th className="text-center px-4 py-3 font-semibold">
+                          Quantity
+                        </th>
+                        <th className="text-right px-4 py-3 font-semibold">
+                          Rate(Rs.)
+                        </th>
+                        <th className="text-right px-4 py-3 font-semibold">
+                          Amount
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cart.map((item, index) => (
+                        <tr
+                          key={item.medicineId}
+                          data-testid={`invoice-item-${index}`}
+                          className={index % 2 === 0 ? "bg-muted/30" : ""}
+                        >
+                          <td className="px-4 py-3 border-b border-border">
+                            {item.medicineName}
+                          </td>
+                          <td className="text-center px-4 py-3 border-b border-border">
+                            {item.quantity}
+                          </td>
+                          <td className="text-right px-4 py-3 border-b border-border">
+                            ₹{item.rate.toFixed(2)}
+                          </td>
+                          <td className="text-right px-4 py-3 border-b border-border font-medium">
+                            ₹{item.amount.toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex justify-end mb-8">
+                  <div className="w-full md:w-1/2 space-y-3">
+                    <div className="flex justify-between items-center pb-2">
+                      <span className="text-muted-foreground">Sub Total</span>
+                      <span className="font-medium" data-testid="text-subtotal">
+                        ₹{subtotal.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pb-2">
+                      <span className="text-muted-foreground">
+                        Tax {taxPercentage}%
+                      </span>
+                      <span className="font-medium">
+                        ₹{taxAmount.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t-2 border-primary">
+                      <span className="text-lg font-semibold">Total Due</span>
+                      <span
+                        className="text-xl font-bold text-primary"
+                        data-testid="text-total-due"
+                      >
+                        ₹{totalDue.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-border pt-6 space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-sm mb-2">
+                      Our Payment Methods:
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      Bank, BHIM #, PhonePe, Google Pay, NetBanking
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold text-sm mb-2">NOTES:</h4>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>Goods once sold will not be returned.</p>
+                      <p>All disputes shall be subject to Delhi jurisdiction</p>
+                      <p>
+                        Please feel free to contact us in case of any question
+                        you may have!
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 pt-4">
+                    <div className="text-xs text-muted-foreground">
+                      <p className="font-medium mb-1">
+                        Thank you for your time & business!
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-sm">
+                        Dr. Suresh Malkani
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Authorized Signer
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+
+              <div className="bg-primary text-primary-foreground px-6 py-3 rounded-b-xl text-center">
+                <p className="text-xs">
+                  malkani.clinic@gmail.com | +91-9839239874 | +91-8800100378 |
+                  www.electrohomeopathy.in
                 </p>
               </div>
+            </Card>
 
-              <div>
-                <h4 className="font-semibold text-sm mb-2">NOTES:</h4>
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <p>Goods once sold will not be returned.</p>
-                  <p>All disputes shall be subject to Delhi jurisdiction</p>
-                  <p>
-                    Please feel free to contact us in case of any question you
-                    may have!
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 pt-4">
-                <div className="text-xs text-muted-foreground">
-                  <p className="font-medium mb-1">
-                    Thank you for your time & business!
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold text-sm">Dr. Suresh Malkani</p>
-                  <p className="text-xs text-muted-foreground">
-                    Authorized Signer
-                  </p>
-                </div>
-              </div>
+            <div className="flex justify-center mt-8">
+              <Button
+                onClick={handleDownloadPDF}
+                disabled={
+                  createInvoiceMutation.isPending ||
+                  !clientName ||
+                  !clientAddress ||
+                  !clientPhone
+                }
+                size="lg"
+                className="px-8"
+                data-testid="button-download-pdf"
+              >
+                <Download className="h-5 w-5" />
+                {createInvoiceMutation.isPending
+                  ? "Generating PDF..."
+                  : "Download PDF & Update Stock"}
+              </Button>
             </div>
-          </CardContent>
-
-          <div className="bg-primary text-primary-foreground px-6 py-3 rounded-b-xl text-center">
-            <p className="text-xs">
-              malkani.clinic@gmail.com | +91-9839239874 | +91-8800100378 |
-              www.electrohomeopathy.in
-            </p>
-          </div>
-        </Card>
-
-        <div className="flex justify-center mt-8">
-          <Button
-            onClick={handleDownloadPDF}
-            disabled={
-              createInvoiceMutation.isPending ||
-              !clientName ||
-              !clientAddress ||
-              !clientPhone
-            }
-            size="lg"
-            className="px-8"
-            data-testid="button-download-pdf"
-          >
-            <Download className="h-5 w-5" />
-            {createInvoiceMutation.isPending
-              ? "Generating PDF..."
-              : "Download PDF"}
-          </Button>
-        </div>
+          </>
+        ) : (
+          <Card className="text-center py-12">
+            <CardContent>
+              <div className="text-green-600 mb-4">
+                <svg
+                  className="w-16 h-16 mx-auto"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold mb-2">
+                Invoice Generated Successfully!
+              </h2>
+              <p className="text-muted-foreground mb-4">
+                The PDF has been downloaded and medicine stock has been updated.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Redirecting to home page...
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

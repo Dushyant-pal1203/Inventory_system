@@ -32,7 +32,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ADD THIS ROUTE - Create new medicine
+  // Create new medicine
   app.post("/api/medicines", async (req, res) => {
     try {
       const validatedData = insertMedicineSchema.parse(req.body);
@@ -50,7 +50,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ADD THIS ROUTE - Delete medicine
+  // Delete medicine
   app.delete("/api/medicines/:id", async (req, res) => {
     try {
       const { id } = req.params;
@@ -67,11 +67,164 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Invoice routes (existing)
+  // Update medicine
+  app.put("/api/medicines/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Create a partial schema for updates (all fields optional)
+      const updateSchema = insertMedicineSchema.partial();
+      const validatedData = updateSchema.parse(req.body);
+
+      const updatedMedicine = await storage.updateMedicine(id, validatedData);
+
+      if (!updatedMedicine) {
+        return res.status(404).json({ error: "Medicine not found" });
+      }
+
+      res.json(updatedMedicine);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Validation failed",
+          details: error.errors,
+        });
+      }
+      console.error("Error updating medicine:", error);
+      res.status(500).json({ error: "Failed to update medicine" });
+    }
+  });
+
+  // Update medicine stock
+  app.patch("/api/medicines/:id/stock", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { quantityChange } = req.body;
+
+      if (typeof quantityChange !== "number") {
+        return res
+          .status(400)
+          .json({ error: "quantityChange must be a number" });
+      }
+
+      const updatedMedicine = await storage.updateMedicineStock(
+        id,
+        quantityChange
+      );
+
+      if (!updatedMedicine) {
+        return res.status(404).json({ error: "Medicine not found" });
+      }
+
+      res.json(updatedMedicine);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Insufficient stock") {
+        return res.status(400).json({ error: "Insufficient stock" });
+      }
+      console.error("Error updating stock:", error);
+      res.status(500).json({ error: "Failed to update stock" });
+    }
+  });
+
+  // Validate stock before creating invoice
+  app.post("/api/validate-stock", async (req, res) => {
+    try {
+      const { items } = req.body;
+
+      if (!Array.isArray(items)) {
+        return res.status(400).json({ error: "Items must be an array" });
+      }
+
+      const stockValidation = [];
+
+      for (const item of items) {
+        const isValid = await storage.validateStockAvailability(
+          item.medicineId,
+          item.quantity
+        );
+
+        const medicine = await storage.getMedicine(item.medicineId);
+
+        stockValidation.push({
+          medicineId: item.medicineId,
+          medicineName: medicine?.name || "Unknown",
+          requestedQuantity: item.quantity,
+          availableStock: medicine?.stockQuantity || 0,
+          isValid,
+        });
+      }
+
+      const allValid = stockValidation.every((item) => item.isValid);
+
+      res.json({
+        valid: allValid,
+        details: stockValidation,
+      });
+    } catch (error) {
+      console.error("Error validating stock:", error);
+      res.status(500).json({ error: "Failed to validate stock" });
+    }
+  });
+
+  // SINGLE CORRECTED INVOICE CREATION ROUTE (with stock deduction)
   app.post("/api/invoices", async (req, res) => {
     try {
       const validatedData = insertInvoiceSchema.parse(req.body);
+
+      console.log("Creating invoice with items:", validatedData.items);
+
+      // Validate stock before creating invoice
+      const stockValidation = await Promise.all(
+        validatedData.items.map(async (item) => {
+          const medicine = await storage.getMedicine(item.medicineId);
+          console.log(
+            `Checking stock for ${medicine?.name}: Current stock = ${medicine?.stockQuantity}, Requested = ${item.quantity}`
+          );
+
+          const isValid = await storage.validateStockAvailability(
+            item.medicineId,
+            item.quantity
+          );
+          return { item, isValid, medicine };
+        })
+      );
+
+      const insufficientStockItems = stockValidation.filter(
+        (item) => !item.isValid
+      );
+
+      if (insufficientStockItems.length > 0) {
+        console.log("Insufficient stock items:", insufficientStockItems);
+        return res.status(400).json({
+          error: "Insufficient stock",
+          details: insufficientStockItems.map((item) => ({
+            medicineId: item.item.medicineId,
+            medicineName: item.medicine?.name,
+            requestedQuantity: item.item.quantity,
+            availableStock: item.medicine?.stockQuantity,
+          })),
+        });
+      }
+
+      // Deduct stock for each item
+      console.log("Deducting stock for items:");
+      for (const item of validatedData.items) {
+        const medicineBefore = await storage.getMedicine(item.medicineId);
+        console.log(
+          `Before deduction - ${medicineBefore?.name}: ${medicineBefore?.stockQuantity}`
+        );
+
+        await storage.updateMedicineStock(item.medicineId, -item.quantity);
+
+        const medicineAfter = await storage.getMedicine(item.medicineId);
+        console.log(
+          `After deduction - ${medicineAfter?.name}: ${medicineAfter?.stockQuantity}`
+        );
+      }
+
       const invoice = await storage.createInvoice(validatedData);
+      console.log("Invoice created successfully:", invoice.id);
+
       res.status(201).json(invoice);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -111,34 +264,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/medicines/:id", async (req, res) => {
+  // Debug endpoint to check current stock
+  app.get("/api/debug/medicines", async (req, res) => {
     try {
-      const { id } = req.params;
-
-      // Create a partial schema for updates (all fields optional)
-      const updateSchema = insertMedicineSchema.partial();
-      const validatedData = updateSchema.parse(req.body);
-
-      const updatedMedicine = await storage.updateMedicine(id, validatedData);
-
-      if (!updatedMedicine) {
-        return res.status(404).json({ error: "Medicine not found" });
-      }
-
-      res.json(updatedMedicine);
+      const medicines = await storage.getAllMedicines();
+      const medicineInfo = medicines.map((med) => ({
+        id: med.id,
+        name: med.name,
+        stock: med.stockQuantity,
+        price: med.price,
+      }));
+      console.log("Current medicines stock:", medicineInfo);
+      res.json(medicineInfo);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({
-          error: "Validation failed",
-          details: error.errors,
-        });
-      }
-      console.error("Error updating medicine:", error);
-      res.status(500).json({ error: "Failed to update medicine" });
+      console.error("Error fetching debug info:", error);
+      res.status(500).json({ error: "Failed to get debug info" });
+    }
+  });
+
+  // Debug endpoint to check field mapping
+  app.get("/api/debug/field-mapping", async (req, res) => {
+    try {
+      const medicines = await storage.getAllMedicines();
+      const sampleMedicine = medicines[0];
+
+      res.json({
+        medicineFields: sampleMedicine
+          ? Object.keys(sampleMedicine)
+          : "No medicines",
+        sampleMedicine: sampleMedicine,
+        expectedFields: ["id", "name", "description", "price", "stockQuantity"],
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Debug failed" });
     }
   });
 
   const httpServer = createServer(app);
-
   return httpServer;
 }

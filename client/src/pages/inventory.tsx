@@ -169,6 +169,9 @@ export default function Inventory() {
         variant: "destructive",
       });
     }
+    {
+      window.location.reload();
+    }
   };
 
   const handleCancelEdit = () => {

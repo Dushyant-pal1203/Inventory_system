@@ -24,6 +24,7 @@ import {
   Trash2,
   ArrowRight,
   ArrowLeft,
+  AlertTriangle,
 } from "lucide-react";
 import { type Medicine, type CartItem } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +35,9 @@ export default function Home() {
   const [selectedMedicineId, setSelectedMedicineId] = useState<string>("");
   const [quantity, setQuantity] = useState<string>("1");
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [stockErrors, setStockErrors] = useState<
+    { medicineId: string; message: string }[]
+  >([]);
 
   const { data: medicines, isLoading } = useQuery<Medicine[]>({
     queryKey: ["/api/medicines"],
@@ -62,13 +66,37 @@ export default function Home() {
     const medicine = medicines?.find((m) => m.id === selectedMedicineId);
     if (!medicine) return;
 
+    // Check stock availability
+    if (medicine.stockQuantity < quantityNum) {
+      toast({
+        title: "Insufficient Stock",
+        description: `Only ${medicine.stockQuantity} units available for ${medicine.name}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const existingItemIndex = cart.findIndex(
       (item) => item.medicineId === selectedMedicineId
     );
 
     if (existingItemIndex >= 0) {
       const updatedCart = [...cart];
-      updatedCart[existingItemIndex].quantity += quantityNum;
+      const newQuantity = updatedCart[existingItemIndex].quantity + quantityNum;
+
+      // Check if total quantity exceeds available stock
+      if (medicine.stockQuantity < newQuantity) {
+        toast({
+          title: "Insufficient Stock",
+          description: `Cannot add ${quantityNum} more units. Only ${
+            medicine.stockQuantity - updatedCart[existingItemIndex].quantity
+          } additional units available for ${medicine.name}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      updatedCart[existingItemIndex].quantity = newQuantity;
       updatedCart[existingItemIndex].amount =
         updatedCart[existingItemIndex].quantity *
         updatedCart[existingItemIndex].rate;
@@ -93,25 +121,83 @@ export default function Home() {
       });
     }
 
+    // Clear stock errors for this medicine
+    setStockErrors((prev) =>
+      prev.filter((error) => error.medicineId !== selectedMedicineId)
+    );
+
     setSelectedMedicineId("");
     setQuantity("1");
   };
 
   const handleRemoveFromCart = (medicineId: string) => {
     setCart(cart.filter((item) => item.medicineId !== medicineId));
+    // Clear stock error when item is removed
+    setStockErrors((prev) =>
+      prev.filter((error) => error.medicineId !== medicineId)
+    );
     toast({
       title: "Removed",
       description: "Item removed from cart",
     });
   };
 
-  const handleProceedToInvoice = () => {
+  const validateStockBeforeProceed = async (): Promise<boolean> => {
+    try {
+      const response = await fetch("/api/validate-stock", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ items: cart }),
+      });
+
+      const result = await response.json();
+
+      if (!result.valid) {
+        const errors = result.details
+          .filter((item: any) => !item.isValid)
+          .map((item: any) => ({
+            medicineId: item.medicineId,
+            message: `Only ${item.availableStock} units available for ${item.medicineName} (requested: ${item.requestedQuantity})`,
+          }));
+
+        setStockErrors(errors);
+
+        toast({
+          title: "Insufficient Stock",
+          description: "Some items in your cart exceed available stock",
+          variant: "destructive",
+        });
+
+        return false;
+      }
+
+      setStockErrors([]);
+      return true;
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to validate stock availability",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const handleProceedToInvoice = async () => {
     if (cart.length === 0) {
       toast({
         title: "Empty Cart",
         description: "Please add at least one medicine to proceed",
         variant: "destructive",
       });
+      return;
+    }
+
+    // Validate stock before proceeding
+    const isStockValid = await validateStockBeforeProceed();
+    if (!isStockValid) {
       return;
     }
 
@@ -122,6 +208,17 @@ export default function Home() {
   const cartTotal = cart.reduce((sum, item) => sum + item.amount, 0);
   const handleGoBack = () => {
     setLocation("/");
+  };
+
+  // Get available stock for display
+  const getAvailableStock = (medicineId: string): number => {
+    const medicine = medicines?.find((m) => m.id === medicineId);
+    return medicine?.stockQuantity || 0;
+  };
+
+  // Get stock error for a specific medicine
+  const getStockError = (medicineId: string) => {
+    return stockErrors.find((error) => error.medicineId === medicineId);
   };
 
   return (
@@ -181,6 +278,9 @@ export default function Home() {
                       <SelectItem key={medicine.id} value={medicine.id}>
                         {medicine.name} - ₹
                         {parseFloat(medicine.price).toFixed(2)}
+                        {medicine.stockQuantity > 0
+                          ? ` (Stock: ${medicine.stockQuantity})`
+                          : " - Out of Stock"}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -196,16 +296,31 @@ export default function Home() {
                   data-testid="input-quantity"
                   type="number"
                   min="1"
+                  max={
+                    selectedMedicineId
+                      ? getAvailableStock(selectedMedicineId)
+                      : undefined
+                  }
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
                   className="w-full"
                   placeholder="Enter quantity"
                 />
+                {selectedMedicineId && (
+                  <p className="text-xs text-muted-foreground">
+                    Available stock: {getAvailableStock(selectedMedicineId)}{" "}
+                    units
+                  </p>
+                )}
               </div>
 
               <Button
                 onClick={handleAddToCart}
-                disabled={isLoading}
+                disabled={
+                  isLoading ||
+                  !selectedMedicineId ||
+                  getAvailableStock(selectedMedicineId) === 0
+                }
                 className="w-full"
                 size="lg"
                 data-testid="button-add-medicine"
@@ -237,41 +352,73 @@ export default function Home() {
                 </div>
               ) : (
                 <div className="space-y-4">
+                  {/* Stock Error Alert */}
+                  {stockErrors.length > 0 && (
+                    <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                      <div className="flex items-center gap-2 text-destructive mb-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        <span className="font-medium">Stock Issues</span>
+                      </div>
+                      <div className="space-y-1 text-sm">
+                        {stockErrors.map((error, index) => (
+                          <p key={index}>{error.message}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                    {cart.map((item) => (
-                      <div
-                        key={item.medicineId}
-                        data-testid={`cart-item-${item.medicineId}`}
-                        className="flex items-start justify-between gap-3 p-3 rounded-lg bg-muted/50 border border-border"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">
-                            {item.medicineName}
-                          </p>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                            <span>Qty: {item.quantity}</span>
-                            <span>×</span>
-                            <span>₹{item.rate.toFixed(2)}</span>
+                    {cart.map((item) => {
+                      const stockError = getStockError(item.medicineId);
+                      const availableStock = getAvailableStock(item.medicineId);
+
+                      return (
+                        <div
+                          key={item.medicineId}
+                          data-testid={`cart-item-${item.medicineId}`}
+                          className={`flex items-start justify-between gap-3 p-3 rounded-lg border ${
+                            stockError
+                              ? "bg-destructive/10 border-destructive/20"
+                              : "bg-muted/50 border-border"
+                          }`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">
+                              {item.medicineName}
+                            </p>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                              <span>Qty: {item.quantity}</span>
+                              <span>×</span>
+                              <span>₹{item.rate.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center gap-1 mt-1">
+                              <span className="text-xs">
+                                Available: {availableStock} units
+                              </span>
+                              {stockError && (
+                                <AlertTriangle className="h-3 w-3 text-destructive" />
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm whitespace-nowrap">
+                              ₹{item.amount.toFixed(2)}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                handleRemoveFromCart(item.medicineId)
+                              }
+                              data-testid={`button-remove-${item.medicineId}`}
+                              className="h-8 w-8 text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm whitespace-nowrap">
-                            ₹{item.amount.toFixed(2)}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              handleRemoveFromCart(item.medicineId)
-                            }
-                            data-testid={`button-remove-${item.medicineId}`}
-                            className="h-8 w-8 text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   <div className="pt-4 border-t border-border">
@@ -290,10 +437,17 @@ export default function Home() {
                       className="w-full"
                       size="lg"
                       data-testid="button-proceed"
+                      disabled={stockErrors.length > 0}
                     >
                       Proceed to Invoice
                       <ArrowRight className="h-5 w-5" />
                     </Button>
+
+                    {stockErrors.length > 0 && (
+                      <p className="text-xs text-destructive text-center mt-2">
+                        Please resolve stock issues before proceeding
+                      </p>
+                    )}
                   </div>
                 </div>
               )}

@@ -18,6 +18,14 @@ export interface IStorage {
   createInvoice(invoice: InsertInvoice): Promise<Invoice>;
   getInvoice(id: string): Promise<Invoice | undefined>;
   getAllInvoices(): Promise<Invoice[]>;
+  updateMedicineStock(
+    id: string,
+    quantityChange: number
+  ): Promise<Medicine | undefined>;
+  validateStockAvailability(
+    medicineId: string,
+    requestedQuantity: number
+  ): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -31,7 +39,15 @@ export class MemStorage implements IStorage {
   }
 
   private initializeMedicines() {
-    const sampleMedicines: InsertMedicine[] = [];
+    const sampleMedicines: InsertMedicine[] = [
+      // You can add sample medicines here if needed
+      // {
+      //   name: "Sample Medicine",
+      //   description: "Sample Description",
+      //   price: "100.00",
+      //   stockQuantity: 50
+      // }
+    ];
 
     sampleMedicines.forEach((medicine) => {
       const id = randomUUID();
@@ -66,6 +82,9 @@ export class MemStorage implements IStorage {
       description: insertMedicine.description ?? "",
     };
     this.medicines.set(id, medicine);
+    console.log(
+      `Medicine created: ${medicine.name} with stock: ${medicine.stockQuantity}`
+    );
     return medicine;
   }
 
@@ -98,6 +117,9 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.invoices.set(id, invoice);
+    console.log(
+      `Invoice created: ${invoice.billNumber} with ${invoice.items.length} items`
+    );
     return invoice;
   }
 
@@ -111,9 +133,15 @@ export class MemStorage implements IStorage {
         new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
     );
   }
+
   async deleteMedicine(id: string): Promise<boolean> {
+    const medicine = this.medicines.get(id);
+    if (medicine) {
+      console.log(`Medicine deleted: ${medicine.name}`);
+    }
     return this.medicines.delete(id);
   }
+
   async updateMedicine(
     id: string,
     updates: Partial<InsertMedicine>
@@ -128,7 +156,81 @@ export class MemStorage implements IStorage {
     };
 
     this.medicines.set(id, updatedMedicine);
+    console.log(
+      `Medicine updated: ${updatedMedicine.name}, stock: ${updatedMedicine.stockQuantity}`
+    );
     return updatedMedicine;
+  }
+
+  // Validate stock availability
+  async validateStockAvailability(
+    medicineId: string,
+    requestedQuantity: number
+  ): Promise<boolean> {
+    const medicine = await this.getMedicine(medicineId);
+    if (!medicine) {
+      console.log(`Medicine not found: ${medicineId}`);
+      return false;
+    }
+
+    const isValid = medicine.stockQuantity >= requestedQuantity;
+    console.log(
+      `Stock validation for ${medicine.name}: Available=${medicine.stockQuantity}, Requested=${requestedQuantity}, Valid=${isValid}`
+    );
+
+    return isValid;
+  }
+
+  // Update medicine stock
+  async updateMedicineStock(
+    id: string,
+    quantityChange: number
+  ): Promise<Medicine | undefined> {
+    const existing = this.medicines.get(id);
+    if (!existing) {
+      console.log(`Medicine not found for stock update: ${id}`);
+      return undefined;
+    }
+
+    console.log(
+      `Updating stock for ${existing.name}: ${
+        existing.stockQuantity
+      } + (${quantityChange}) = ${existing.stockQuantity + quantityChange}`
+    );
+
+    const newStockQuantity = existing.stockQuantity + quantityChange;
+    if (newStockQuantity < 0) {
+      console.log(
+        `Insufficient stock for ${existing.name}: Current=${existing.stockQuantity}, Change=${quantityChange}`
+      );
+      throw new Error("Insufficient stock");
+    }
+
+    const updatedMedicine: Medicine = {
+      ...existing,
+      stockQuantity: newStockQuantity,
+    };
+
+    this.medicines.set(id, updatedMedicine);
+
+    // Verify the update
+    const verified = this.medicines.get(id);
+    console.log(
+      `Stock update verified: ${verified?.name} = ${verified?.stockQuantity}`
+    );
+
+    return updatedMedicine;
+  }
+
+  // Helper method to get current state for debugging
+  async getStorageState(): Promise<{
+    medicines: Medicine[];
+    invoices: Invoice[];
+  }> {
+    return {
+      medicines: await this.getAllMedicines(),
+      invoices: await this.getAllInvoices(),
+    };
   }
 }
 
