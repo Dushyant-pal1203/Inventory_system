@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, Plus, ArrowLeft, Edit } from "lucide-react";
+import { Trash2, Plus, ArrowLeft, Edit, Save, Undo2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMedicines } from "../hooks/se-medicines";
 
@@ -15,23 +15,39 @@ interface MedicineRow {
   quantity: string;
 }
 
+interface EditValues {
+  name: string;
+  description: string;
+  price: string;
+  stockQuantity: string;
+}
+
 export default function Inventory() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { medicines, loading, addMedicine, deleteMedicine } = useMedicines();
+  const { medicines, loading, addMedicine, updateMedicine, deleteMedicine } =
+    useMedicines();
 
-  // Dynamic rows for adding medicines
   const [rows, setRows] = useState<MedicineRow[]>([
     { name: "", description: "", price: "", quantity: "" },
   ]);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<EditValues>({
+    name: "",
+    description: "",
+    price: "",
+    stockQuantity: "",
+  });
 
   const handleAddRow = () => {
     setRows([...rows, { name: "", description: "", price: "", quantity: "" }]);
   };
 
   const handleDeleteRow = (index: number) => {
-    setRows(rows.filter((_, i) => i !== index));
+    if (rows.length > 1) {
+      setRows(rows.filter((_, i) => i !== index));
+    }
   };
 
   const handleRowChange = (
@@ -44,14 +60,31 @@ export default function Inventory() {
     setRows(newRows);
   };
 
-  const handleSave = async () => {
-    // Validate all rows
-    const valid = rows.every((r) => r.name && r.price && r.quantity);
+  const validateRow = (row: MedicineRow): boolean => {
+    return !!(row.name.trim() && row.price && row.quantity);
+  };
 
-    if (!valid) {
+  const handleSave = async () => {
+    // Filter out empty rows and validate
+    const rowsToSave = rows.filter(
+      (row) =>
+        row.name.trim() || row.description.trim() || row.price || row.quantity
+    );
+
+    if (rowsToSave.length === 0) {
+      toast({
+        title: "No Data",
+        description: "Please add at least one medicine to save",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const allValid = rowsToSave.every(validateRow);
+    if (!allValid) {
       toast({
         title: "Missing Data",
-        description: "Please fill all fields before saving",
+        description: "Please fill name, price, and quantity for all medicines",
         variant: "destructive",
       });
       return;
@@ -59,26 +92,105 @@ export default function Inventory() {
 
     setSaving(true);
     try {
-      // Save each medicine individually
-      for (const row of rows) {
-        await addMedicine({
-          name: row.name,
-          price: row.price,
-          stockQuantity: parseInt(row.quantity) || 0,
-        });
+      for (const row of rowsToSave) {
+        if (validateRow(row)) {
+          // Cast payload to any to satisfy addMedicine's parameter type
+          await addMedicine({
+            name: row.name.trim(),
+            description: row.description.trim(),
+            price: row.price.trim() || "0",
+            stockQuantity: parseInt(row.quantity) || 0,
+          } as any);
+        }
       }
 
-      // Reset rows after successful save
+      toast({
+        title: "Success",
+        description: `${rowsToSave.length} medicine(s) added successfully`,
+      });
+
+      // Reset to one empty row
       setRows([{ name: "", description: "", price: "", quantity: "" }]);
     } catch (error) {
-      // Error handling is done in the hook
+      toast({
+        title: "Error",
+        description: "Failed to save medicines",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeleteStored = async (id: string) => {
-    await deleteMedicine(id);
+  const handleEditClick = (medicine: any) => {
+    setEditingId(medicine.id);
+    setEditValues({
+      name: medicine.name,
+      description: medicine.description || "",
+      price: medicine.price.toString(),
+      stockQuantity: medicine.stockQuantity.toString(),
+    });
+  };
+
+  // Editing medicines is not supported because updateMedicine is not available.
+  const handleSaveEdit = async (id: string) => {
+    try {
+      // Validate edit values
+      if (
+        !editValues.name.trim() ||
+        !editValues.price ||
+        !editValues.stockQuantity
+      ) {
+        toast({
+          title: "Missing Data",
+          description: "Please fill name, price, and quantity",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await updateMedicine(id, {
+        name: editValues.name.trim(),
+        description: editValues.description.trim(),
+        price: editValues.price,
+        stockQuantity: parseInt(editValues.stockQuantity) || 0,
+      });
+
+      toast({
+        title: "Success",
+        description: "Medicine updated successfully",
+      });
+
+      setEditingId(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update medicine",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+  };
+
+  const handleDeleteMedicine = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this medicine?")) {
+      try {
+        await deleteMedicine(id);
+        toast({
+          title: "Success",
+          description: "Medicine deleted successfully",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete medicine",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   const handleBack = () => setLocation("/");
@@ -92,7 +204,7 @@ export default function Inventory() {
             variant="ghost"
             onClick={handleBack}
             data-testid="button-back"
-            className="text-primary-foreground border-primary-foreground/20"
+            className="text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground/10"
           >
             <ArrowLeft className="h-5 w-5" />
             Back
@@ -105,7 +217,7 @@ export default function Inventory() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto space-y-10 mt-[110px]">
+      <div className="max-w-6xl mx-auto space-y-10 mt-[110px]">
         {/* Add New Medicines */}
         <Card>
           <CardHeader>
@@ -113,59 +225,80 @@ export default function Inventory() {
           </CardHeader>
           <CardContent className="space-y-6">
             {rows.map((row, index) => (
-              <div key={index} className="flex gap-4 items-end">
+              <div
+                key={index}
+                className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end"
+              >
                 <div>
-                  <Label>Name</Label>
+                  <Label htmlFor={`name-${index}`}>
+                    Name <span className="text-red-600">*</span>
+                  </Label>
                   <Input
+                    id={`name-${index}`}
                     value={row.name}
                     onChange={(e) =>
                       handleRowChange(index, "name", e.target.value)
                     }
                     placeholder="Medicine Name"
+                    className="w-full"
                   />
                 </div>
+
                 <div>
-                  <Label>Description</Label>
+                  <Label htmlFor={`description-${index}`}>Description</Label>
                   <Input
+                    id={`description-${index}`}
                     value={row.description}
                     onChange={(e) =>
                       handleRowChange(index, "description", e.target.value)
                     }
                     placeholder="Medicine Description"
+                    className="w-full"
                   />
                 </div>
 
                 <div>
-                  <Label>Price</Label>
+                  <Label htmlFor={`price-${index}`}>
+                    Price <span className="text-red-600">*</span>
+                  </Label>
                   <Input
+                    id={`price-${index}`}
                     type="number"
+                    min="0"
+                    step="0.01"
                     value={row.price}
                     onChange={(e) =>
                       handleRowChange(index, "price", e.target.value)
                     }
                     placeholder="₹ Price"
+                    className="w-full"
                   />
                 </div>
 
                 <div>
-                  <Label>Quantity</Label>
+                  <Label htmlFor={`quantity-${index}`}>
+                    Quantity <span className="text-red-600">*</span>
+                  </Label>
                   <Input
+                    id={`quantity-${index}`}
                     type="number"
+                    min="0"
                     value={row.quantity}
                     onChange={(e) =>
                       handleRowChange(index, "quantity", e.target.value)
                     }
                     placeholder="Stock Qty"
+                    className="w-full"
                   />
                 </div>
 
-                {/* Delete Row Button (except first row) */}
                 <div className="flex justify-end">
-                  {index > 0 && (
+                  {rows.length > 1 && (
                     <Button
                       variant="destructive"
                       size="icon"
                       onClick={() => handleDeleteRow(index)}
+                      className="h-10"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -174,13 +307,13 @@ export default function Inventory() {
               </div>
             ))}
 
-            <div className="flex justify-between mt-4">
+            <div className="flex justify-between mt-6">
               <Button variant="outline" onClick={handleAddRow}>
                 <Plus className="h-4 w-4 mr-2" /> Add Row
               </Button>
 
               <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : "Save All"}
+                {saving ? "Saving..." : "Save Medicines"}
               </Button>
             </div>
           </CardContent>
@@ -194,56 +327,160 @@ export default function Inventory() {
 
           <CardContent>
             {loading ? (
-              <p className="text-muted-foreground text-sm">
-                Loading medicines...
-              </p>
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Loading medicines...</p>
+              </div>
             ) : medicines.length === 0 ? (
-              <p className="text-muted-foreground text-sm">
-                No medicines added yet.
-              </p>
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">No medicines added yet.</p>
+              </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm border text-center">
+                <table className="w-full text-sm border">
                   <thead className="bg-muted">
                     <tr>
-                      <th className="p-2">Name</th>
-                      <th className="p-2">Description</th>
-                      <th className="p-2">Price</th>
-                      <th className="p-2">Quantity</th>
-                      <th className="p-2">Actions</th>
+                      <th className="p-3 text-left">Name</th>
+                      <th className="p-3 text-left">Description</th>
+                      <th className="p-3 text-right">Price</th>
+                      <th className="p-3 text-right">Quantity</th>
+                      <th className="p-3 text-center">Actions</th>
                     </tr>
                   </thead>
 
                   <tbody>
-                    {medicines.map((medicine) => (
-                      <tr key={medicine.id} className="border-b">
-                        <td className="p-2 text-start">{medicine.name}</td>
-                        {/* <td className="p-2">{medicine.description}</td> */}
-                        <td className="p-2">₹{medicine.price}</td>
-                        <td className="p-2">{medicine.stockQuantity}</td>
+                    {medicines.map((medicine: any) => {
+                      const isEditing = editingId === medicine.id;
 
-                        <td className="p-2">
-                          <div className="flex gap-2 justify-center">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="hover:bg-green-600 hover:text-white text-[#16A249]"
-                            >
-                              <Edit className="h-4 w-4 " />
-                            </Button>
+                      return (
+                        <tr
+                          key={medicine.id}
+                          className="border-b hover:bg-muted/50"
+                        >
+                          <td className="p-3">
+                            {isEditing ? (
+                              <Input
+                                value={editValues.name}
+                                onChange={(e) =>
+                                  setEditValues({
+                                    ...editValues,
+                                    name: e.target.value,
+                                  })
+                                }
+                                placeholder="Medicine Name"
+                              />
+                            ) : (
+                              <span className="font-medium">
+                                {medicine.name}
+                              </span>
+                            )}
+                          </td>
 
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="hover:bg-red-300 hover:text-red-600 text-white"
-                              onClick={() => handleDeleteStored(medicine.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          <td className="p-3">
+                            {isEditing ? (
+                              <Input
+                                value={editValues.description}
+                                onChange={(e) =>
+                                  setEditValues({
+                                    ...editValues,
+                                    description: e.target.value,
+                                  })
+                                }
+                                placeholder="Description"
+                              />
+                            ) : (
+                              medicine.description || (
+                                <span className="text-muted-foreground">-</span>
+                              )
+                            )}
+                          </td>
+
+                          <td className="p-3 text-right">
+                            {isEditing ? (
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={editValues.price}
+                                onChange={(e) =>
+                                  setEditValues({
+                                    ...editValues,
+                                    price: e.target.value,
+                                  })
+                                }
+                                className="text-right"
+                              />
+                            ) : (
+                              `₹${parseFloat(medicine.price).toFixed(2)}`
+                            )}
+                          </td>
+
+                          <td className="p-3 text-right">
+                            {isEditing ? (
+                              <Input
+                                type="number"
+                                min="0"
+                                value={editValues.stockQuantity}
+                                onChange={(e) =>
+                                  setEditValues({
+                                    ...editValues,
+                                    stockQuantity: e.target.value,
+                                  })
+                                }
+                                className="text-right"
+                              />
+                            ) : (
+                              medicine.stockQuantity
+                            )}
+                          </td>
+
+                          <td className="p-3">
+                            <div className="flex gap-2 justify-center">
+                              {isEditing ? (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleSaveEdit(medicine.id)}
+                                    className="hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
+                                  >
+                                    <Save className="h-4 w-4 mr-1" />
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={handleCancelEdit}
+                                    className="hover:bg-gray-100 hover:border-red-600 hover:text-red-600 text-white"
+                                  >
+                                    <Undo2 className="h-4 w-4 mr-1" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleEditClick(medicine)}
+                                    className="hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
+                                  >
+                                    <Edit className="h-4 w-4 mr-1" />
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleDeleteMedicine(medicine.id)
+                                    }
+                                    className="hover:bg-gray-100 hover:border-red-600 hover:text-red-600 text-white"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-1" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

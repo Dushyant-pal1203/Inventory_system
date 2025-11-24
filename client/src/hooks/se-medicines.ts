@@ -93,10 +93,50 @@ export function useMedicines() {
     }
   };
 
+  // Update medicine
+  const updateMedicine = async (
+    id: string,
+    updates: Partial<InsertMedicine>
+  ) => {
+    try {
+      const response = await fetch(`/api/medicines/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updates),
+      });
+
+      if (response.ok) {
+        const updatedMedicine = await response.json();
+        setMedicines((prev) =>
+          prev.map((med) => (med.id === id ? updatedMedicine : med))
+        );
+        toast({
+          title: "Success",
+          description: "Medicine updated successfully",
+        });
+        return updatedMedicine;
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update medicine");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to update medicine",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   return {
     medicines,
     loading,
     addMedicine,
+    updateMedicine,
     deleteMedicine,
     refreshMedicines: loadMedicines,
   };

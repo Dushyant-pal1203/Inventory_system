@@ -17,6 +17,7 @@ export const medicines = pgTable("medicines", {
     .primaryKey()
     .default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
+  description: text("description"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   stockQuantity: integer("stock_quantity").notNull().default(0),
 });

@@ -42,7 +42,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
   const primaryGreen: [number, number, number] = [34, 139, 34];
   const lightGray: [number, number, number] = [240, 240, 240];
   const black: [number, number, number] = [0, 0, 0];
-  const grayText: [number, number, number] = [120, 120, 120];
+  const grayText: [number, number, number] = [200, 200, 200];
   const white: [number, number, number] = [255, 255, 255]; // FIX ADDED
 
   // Load logo
@@ -65,17 +65,17 @@ export async function generateInvoicePDF(data: InvoiceData) {
   doc.setTextColor(...white); // FIXED
   doc.setFontSize(19);
   doc.setFont("helvetica", "bold");
-  doc.text("MALKANI HEALTH OF ELECTROHOMEOPATHY &", 40, 10);
-  doc.text("RESEARCH CENTRE", 40, 18);
+  doc.text("MALKANI HEALTH OF ELECTROHOMEOPATHY &", 45, 10);
+  doc.text("RESEARCH CENTRE", 45, 18);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.text("(64, Street No. 2, Vill- Sadipur Delhi 110094.)", 40, 26);
+  doc.text("(64, Street No. 2, Vill- Sadipur Delhi 110094.)", 45, 26);
 
   doc.setFontSize(8);
-  doc.text("GSTIN:", 40, 30);
+  doc.text("GSTIN:", 45, 30);
   doc.setFont("helvetica", "bold");
-  doc.text("07AHCPM0625Q1Z5", 50, 30);
+  doc.text("07AHCPM0625Q1Z5", 55, 30);
 
   // Watermark
   if (logoBase64) {
@@ -88,7 +88,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
         (pageWidth - 80) / 2,
         (pageHeight - 80) / 2,
         80,
-        80
+        70
       );
       doc.restoreGraphicsState();
     } catch {
@@ -134,7 +134,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
   doc.setFont("helvetica", "bold");
   doc.text("Total Amount Due:", pageWidth - 80, yPosition);
   doc.setTextColor(...primaryGreen);
-  doc.text(`Rs. ${data.totalDue.toFixed(2)}`, pageWidth - 30, yPosition, {
+  doc.text(`Rs. ${data.totalDue.toFixed(2)}`, pageWidth - 28, yPosition, {
     align: "right",
   });
   doc.setTextColor(...black);

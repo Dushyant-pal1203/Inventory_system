@@ -111,6 +111,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/medicines/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Create a partial schema for updates (all fields optional)
+      const updateSchema = insertMedicineSchema.partial();
+      const validatedData = updateSchema.parse(req.body);
+
+      const updatedMedicine = await storage.updateMedicine(id, validatedData);
+
+      if (!updatedMedicine) {
+        return res.status(404).json({ error: "Medicine not found" });
+      }
+
+      res.json(updatedMedicine);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Validation failed",
+          details: error.errors,
+        });
+      }
+      console.error("Error updating medicine:", error);
+      res.status(500).json({ error: "Failed to update medicine" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

@@ -10,7 +10,11 @@ export interface IStorage {
   getAllMedicines(): Promise<Medicine[]>;
   getMedicine(id: string): Promise<Medicine | undefined>;
   createMedicine(medicine: InsertMedicine): Promise<Medicine>;
-  deleteMedicine(id: string): Promise<boolean>; // Make sure this exists
+  updateMedicine(
+    id: string,
+    updates: Partial<InsertMedicine>
+  ): Promise<Medicine | undefined>;
+  deleteMedicine(id: string): Promise<boolean>;
   createInvoice(invoice: InsertInvoice): Promise<Invoice>;
   getInvoice(id: string): Promise<Invoice | undefined>;
   getAllInvoices(): Promise<Invoice[]>;
@@ -27,36 +31,18 @@ export class MemStorage implements IStorage {
   }
 
   private initializeMedicines() {
-    const sampleMedicines: InsertMedicine[] = [
-      { name: "Paracetamol 500mg", price: "25.50", stockQuantity: 100 },
-      { name: "Amoxicillin 250mg", price: "85.00", stockQuantity: 50 },
-      { name: "Ibuprofen 400mg", price: "35.75", stockQuantity: 75 },
-      { name: "Cetirizine 10mg", price: "15.00", stockQuantity: 120 },
-      { name: "Omeprazole 20mg", price: "45.50", stockQuantity: 60 },
-      { name: "Metformin 500mg", price: "12.00", stockQuantity: 150 },
-      { name: "Amlodipine 5mg", price: "28.00", stockQuantity: 80 },
-      { name: "Azithromycin 500mg", price: "120.00", stockQuantity: 40 },
-      { name: "Vitamin D3 60000 IU", price: "55.00", stockQuantity: 90 },
-      { name: "Calcium Carbonate 500mg", price: "18.50", stockQuantity: 110 },
-      { name: "Diclofenac Sodium 50mg", price: "22.00", stockQuantity: 70 },
-      { name: "Ranitidine 150mg", price: "32.00", stockQuantity: 65 },
-      { name: "Ciprofloxacin 500mg", price: "95.00", stockQuantity: 45 },
-      { name: "Dolo 650mg", price: "30.00", stockQuantity: 100 },
-      { name: "Montelukast 10mg", price: "48.00", stockQuantity: 55 },
-      { name: "Pantoprazole 40mg", price: "52.00", stockQuantity: 60 },
-      { name: "Losartan 50mg", price: "38.00", stockQuantity: 70 },
-      { name: "Atorvastatin 10mg", price: "42.00", stockQuantity: 80 },
-      { name: "Salbutamol Inhaler", price: "125.00", stockQuantity: 35 },
-      { name: "Multivitamin Tablets", price: "65.00", stockQuantity: 95 },
-    ];
+    const sampleMedicines: InsertMedicine[] = [];
 
     sampleMedicines.forEach((medicine) => {
       const id = randomUUID();
+
       const newMedicine: Medicine = {
         ...medicine,
         id,
         stockQuantity: medicine.stockQuantity ?? 0,
+        description: medicine.description ?? "",
       };
+
       this.medicines.set(id, newMedicine);
     });
   }
@@ -77,6 +63,7 @@ export class MemStorage implements IStorage {
       ...insertMedicine,
       id,
       stockQuantity: insertMedicine.stockQuantity ?? 0,
+      description: insertMedicine.description ?? "",
     };
     this.medicines.set(id, medicine);
     return medicine;
@@ -126,6 +113,22 @@ export class MemStorage implements IStorage {
   }
   async deleteMedicine(id: string): Promise<boolean> {
     return this.medicines.delete(id);
+  }
+  async updateMedicine(
+    id: string,
+    updates: Partial<InsertMedicine>
+  ): Promise<Medicine | undefined> {
+    const existing = this.medicines.get(id);
+    if (!existing) return undefined;
+
+    const updatedMedicine: Medicine = {
+      ...existing,
+      ...updates,
+      id, // Ensure ID doesn't change
+    };
+
+    this.medicines.set(id, updatedMedicine);
+    return updatedMedicine;
   }
 }
 

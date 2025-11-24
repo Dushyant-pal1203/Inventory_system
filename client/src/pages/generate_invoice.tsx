@@ -191,7 +191,9 @@ export default function GenerateInvoice() {
           <CardContent>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="client-name">Client Name *</Label>
+                <Label htmlFor="client-name">
+                  Client Name <span className="text-red-600">*</span>
+                </Label>
                 <Input
                   id="client-name"
                   data-testid="input-client-name"
@@ -202,7 +204,9 @@ export default function GenerateInvoice() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="client-phone">Phone Number *</Label>
+                <Label htmlFor="client-phone">
+                  Phone Number <span className="text-red-600">*</span>
+                </Label>
                 <Input
                   id="client-phone"
                   data-testid="input-client-phone"
@@ -214,7 +218,9 @@ export default function GenerateInvoice() {
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="client-address">Address *</Label>
+                <Label htmlFor="client-address">
+                  Address <span className="text-red-600">*</span>
+                </Label>
                 <Input
                   id="client-address"
                   data-testid="input-client-address"
