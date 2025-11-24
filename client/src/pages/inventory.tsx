@@ -202,7 +202,7 @@ export default function Inventory() {
     <div className="min-h-[100vh] bg-background p-[20px] sm:p-0 sm:min-h-[80.6vh]">
       {/* Header */}
       <div className="bg-primary text-primary-foreground py-6 px-4 shadow-md fixed top-0 left-0 w-full z-10">
-        <div className="max-w-5xl mx-auto flex items-center gap-4">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
           <Button
             variant="ghost"
             onClick={handleBack}
@@ -212,11 +212,21 @@ export default function Inventory() {
             <ArrowLeft className="h-5 w-5" />
             Back
           </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl md:text-3xl font-bold">
-              Inventory Management
-            </h1>
+          <div
+            onClick={() => {
+              window.location.href = "/";
+            }}
+            className="hidden sm:block cursor-pointer"
+          >
+            <img
+              src="images/logo.png"
+              alt="Logo"
+              className="w-[50px] h-[45px]"
+            />
           </div>
+          <h1 className="text-2xl md:text-3xl font-bold">
+            Inventory Management
+          </h1>
         </div>
       </div>
 

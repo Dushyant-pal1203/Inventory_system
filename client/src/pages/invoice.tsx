@@ -224,7 +224,7 @@ export default function Home() {
   return (
     <div className="min-h-[86.1vh] bg-background pb-12 sm:min-h-auto">
       <div className="bg-primary text-primary-foreground py-6 px-4 shadow-md fixed top-0 left-0 w-full z-10">
-        <div className="max-w-5xl mx-auto flex items-center gap-4">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
           <Button
             variant="ghost"
             onClick={handleGoBack}
@@ -234,9 +234,19 @@ export default function Home() {
             <ArrowLeft className="h-5 w-5" />
             Back
           </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl md:text-3xl font-bold">Invoice Creation</h1>
+          <div
+            onClick={() => {
+              window.location.href = "/";
+            }}
+            className="hidden sm:block cursor-pointer"
+          >
+            <img
+              src="images/logo.png"
+              alt="Logo"
+              className="w-[50px] h-[45px]"
+            />
           </div>
+          <h1 className="text-2xl md:text-3xl font-bold">Invoice Creation</h1>
         </div>
       </div>
 

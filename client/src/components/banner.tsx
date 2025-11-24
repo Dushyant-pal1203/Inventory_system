@@ -4,11 +4,18 @@ const Banner = () => {
       {/* TOP HEADING */}
       <div className="w-full flex flex-col sm:flex-row items-center justify-between px-4 py-2 sm:py-4 text-center bg-primary">
         {/* Logo - hidden on mobile, visible on sm and up */}
-        <img
-          src="images/logo.png"
-          alt="Logo"
-          className="hidden sm:block w-[80px] md:w-[110px] h-fit"
-        />
+        <div
+          onClick={() => {
+            window.location.href = "/";
+          }}
+          className="hidden sm:block cursor-pointer"
+        >
+          <img
+            src="images/logo.png"
+            alt="Logo"
+            className="w-[80px] md:w-[110px] h-fit"
+          />
+        </div>
 
         {/* Mobile logo - centered above text */}
         <img
