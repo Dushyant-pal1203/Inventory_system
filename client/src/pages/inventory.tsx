@@ -4,9 +4,27 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, Plus, ArrowLeft, Edit, Save, Undo2 } from "lucide-react";
+import {
+  Trash2,
+  Plus,
+  ArrowLeft,
+  Edit,
+  Save,
+  Undo2,
+  ChevronLeft,
+  ChevronRight,
+  Upload,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMedicines } from "../hooks/se-medicines";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface MedicineRow {
   name: string;
@@ -39,6 +57,15 @@ export default function Inventory() {
     price: "",
     stockQuantity: "",
   });
+
+  // Add state for delete modal and file upload
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [medicineToDelete, setMedicineToDelete] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const handleAddRow = () => {
     setRows([...rows, { name: "", description: "", price: "", quantity: "" }]);
@@ -94,7 +121,6 @@ export default function Inventory() {
     try {
       for (const row of rowsToSave) {
         if (validateRow(row)) {
-          // Cast payload to any to satisfy addMedicine's parameter type
           await addMedicine({
             name: row.name.trim(),
             description: row.description.trim(),
@@ -132,7 +158,6 @@ export default function Inventory() {
     });
   };
 
-  // Editing medicines is not supported because updateMedicine is not available.
   const handleSaveEdit = async (id: string) => {
     try {
       // Validate edit values
@@ -169,40 +194,263 @@ export default function Inventory() {
         variant: "destructive",
       });
     }
-    {
-      window.location.reload();
-    }
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
   };
 
-  const handleDeleteMedicine = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this medicine?")) {
-      try {
-        await deleteMedicine(id);
-        toast({
-          title: "Success",
-          description: "Medicine deleted successfully",
-        });
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to delete medicine",
-          variant: "destructive",
-        });
-      }
+  // Updated delete function with modal
+  const handleDeleteClick = (id: string) => {
+    setMedicineToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteMedicine = async () => {
+    if (!medicineToDelete) return;
+
+    try {
+      await deleteMedicine(medicineToDelete);
+      toast({
+        title: "Success",
+        description: "Medicine deleted successfully",
+      });
+      setDeleteModalOpen(false);
+      setMedicineToDelete(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete medicine",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleBack = () => setLocation("/");
+  const handleCancelDelete = () => {
+    setDeleteModalOpen(false);
+    setMedicineToDelete(null);
+  };
+
+  // CSV file upload handler
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check if file is CSV format
+    if (!file.name.endsWith(".csv")) {
+      toast({
+        title: "Invalid File",
+        description: "Please upload a CSV file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const text = await file.text();
+      const lines = text.split("\n").filter((line) => line.trim());
+
+      if (lines.length < 2) {
+        toast({
+          title: "Empty File",
+          description: "CSV file is empty or has no data rows",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
+
+      // Validate headers
+      const requiredHeaders = ["name", "price", "quantity"];
+      const missingHeaders = requiredHeaders.filter(
+        (header) => !headers.includes(header)
+      );
+
+      if (missingHeaders.length > 0) {
+        toast({
+          title: "Invalid CSV Format",
+          description: `Missing required columns: ${missingHeaders.join(
+            ", "
+          )}. Required columns: name, price, quantity`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const medicines = [];
+      let errorRows: string[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(",").map((v) => v.trim());
+        const medicine: any = {};
+
+        headers.forEach((header, index) => {
+          medicine[header] = values[index] || "";
+        });
+
+        // Validate required fields
+        if (!medicine.name || !medicine.price || !medicine.quantity) {
+          errorRows.push(`Row ${i + 1}: Missing required fields`);
+          return; // Skip to next row
+        }
+
+        const price = parseFloat(medicine.price);
+        const quantity = parseInt(medicine.quantity);
+
+        if (isNaN(price) || price < 0) {
+          errorRows.push(`Row ${i + 1}: Invalid price value`);
+          return;
+        }
+
+        if (isNaN(quantity) || quantity < 0) {
+          errorRows.push(`Row ${i + 1}: Invalid quantity value`);
+          return;
+        }
+
+        medicines.push({
+          name: medicine.name,
+          description: medicine.description || "",
+          price: price.toFixed(2),
+          stockQuantity: quantity,
+        });
+      }
+
+      if (errorRows.length > 0) {
+        toast({
+          title: "Validation Errors",
+          description: `Found ${
+            errorRows.length
+          } error(s) in CSV file. First few: ${errorRows
+            .slice(0, 3)
+            .join(", ")}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (medicines.length === 0) {
+        toast({
+          title: "No Valid Data",
+          description: "No valid medicine records found in CSV file",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Use your existing addMedicine function for each medicine
+      let successCount = 0;
+      let failedMedicines = [];
+
+      for (const medicine of medicines) {
+        try {
+          await addMedicine(medicine as any);
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to add medicine: ${medicine.name}`, error);
+          failedMedicines.push(medicine.name);
+        }
+      }
+
+      if (failedMedicines.length > 0) {
+        toast({
+          title: "Partial Success",
+          description: `Successfully uploaded ${successCount} medicines. Failed to upload: ${failedMedicines
+            .slice(0, 3)
+            .join(", ")}${failedMedicines.length > 3 ? "..." : ""}`,
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: `Successfully uploaded ${successCount} medicines from CSV file`,
+        });
+      }
+
+      // Reset form and refresh data
+      setRows([{ name: "", description: "", price: "", quantity: "" }]);
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast({
+        title: "Upload Failed",
+        description: "Failed to process CSV file",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+      event.target.value = "";
+    }
+  };
+
+  const handleBack = () => {
+    setLocation("/");
+  };
+
+  // Pagination calculations
+  const totalPages = Math.ceil(medicines.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentMedicines = medicines.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const renderPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 3;
+
+    // Always show first page
+    pages.push(1);
+
+    // Calculate start and end of visible page range
+    let startPage = Math.max(2, currentPage - 1);
+    let endPage = Math.min(totalPages - 1, currentPage + 1);
+
+    // Adjust if we're near the start
+    if (currentPage <= 2) {
+      endPage = Math.min(totalPages - 1, maxVisiblePages);
+    }
+
+    // Adjust if we're near the end
+    if (currentPage >= totalPages - 1) {
+      startPage = Math.max(2, totalPages - maxVisiblePages + 1);
+    }
+
+    // Add ellipsis after first page if needed
+    if (startPage > 2) {
+      pages.push("ellipsis-start");
+    }
+
+    // Add middle pages
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+
+    // Add ellipsis before last page if needed
+    if (endPage < totalPages - 1) {
+      pages.push("ellipsis-end");
+    }
+
+    // Always show last page if there is more than one page
+    if (totalPages > 1) {
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
 
   return (
     <div className="min-h-[100vh] bg-background p-[20px] sm:p-0 sm:min-h-[80.6vh]">
       {/* Header */}
       <div className="bg-primary text-primary-foreground py-6 px-4 shadow-md fixed top-0 left-0 w-full z-10">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <Button
             variant="ghost"
             onClick={handleBack}
@@ -320,15 +568,56 @@ export default function Inventory() {
               </div>
             ))}
 
-            <div className="flex justify-between mt-6">
-              <Button variant="outline" onClick={handleAddRow}>
-                <Plus className="h-4 w-4 mr-2" /> Add Row
-              </Button>
+            <div className="flex flex-col sm:flex-row justify-between gap-4 mt-6">
+              <div className="flex gap-4">
+                <Button variant="outline" onClick={handleAddRow}>
+                  <Plus className="h-4 w-4 mr-2" /> Add Row
+                </Button>
+
+                {/* CSV Upload Button */}
+                <Button
+                  variant="outline"
+                  onClick={() => document.getElementById("csv-upload")?.click()}
+                  disabled={uploading}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {uploading ? "Uploading..." : "Upload CSV"}
+                  <Input
+                    id="csv-upload"
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                </Button>
+              </div>
 
               <Button onClick={handleSave} disabled={saving}>
                 {saving ? "Saving..." : "Save Medicines"}
               </Button>
             </div>
+
+            {/* CSV Format Help */}
+            {/* <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+              <h4 className="font-medium text-blue-800 mb-2">
+                CSV File Format:
+              </h4>
+              <p className="text-sm text-blue-700 mb-2">
+                Your CSV file should have the following columns:{" "}
+                <strong>name, price, quantity</strong> (description is optional)
+              </p>
+              <div className="text-xs bg-white p-2 rounded border">
+                <code>
+                  name,description,price,quantity
+                  <br />
+                  Paracetamol,Pain relief medicine,25.50,100
+                  <br />
+                  Aspirin,Headache medicine,15.75,50
+                  <br />
+                  Vitamin C,Immune booster,12.00,200
+                </code>
+              </div>
+            </div> */}
           </CardContent>
         </Card>
 
@@ -348,159 +637,253 @@ export default function Inventory() {
                 <p className="text-muted-foreground">No medicines added yet.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm border">
-                  <thead className="bg-muted">
-                    <tr>
-                      <th className="p-3 text-left">Name</th>
-                      <th className="p-3 text-left">Description</th>
-                      <th className="p-3 text-right">Price</th>
-                      <th className="p-3 text-right">Quantity</th>
-                      <th className="p-3 text-center">Actions</th>
-                    </tr>
-                  </thead>
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="p-3 text-left">Name</th>
+                        <th className="p-3 text-left">Description</th>
+                        <th className="p-3 text-right">Price</th>
+                        <th className="p-3 text-right">Quantity</th>
+                        <th className="p-3 text-center">Actions</th>
+                      </tr>
+                    </thead>
 
-                  <tbody>
-                    {medicines.map((medicine: any) => {
-                      const isEditing = editingId === medicine.id;
+                    <tbody>
+                      {currentMedicines.map((medicine: any) => {
+                        const isEditing = editingId === medicine.id;
 
-                      return (
-                        <tr
-                          key={medicine.id}
-                          className="border-b hover:bg-muted/50"
-                        >
-                          <td className="p-3">
-                            {isEditing ? (
-                              <Input
-                                value={editValues.name}
-                                onChange={(e) =>
-                                  setEditValues({
-                                    ...editValues,
-                                    name: e.target.value,
-                                  })
-                                }
-                                placeholder="Medicine Name"
-                              />
-                            ) : (
-                              <span className="font-medium">
-                                {medicine.name}
-                              </span>
-                            )}
-                          </td>
-
-                          <td className="p-3">
-                            {isEditing ? (
-                              <Input
-                                value={editValues.description}
-                                onChange={(e) =>
-                                  setEditValues({
-                                    ...editValues,
-                                    description: e.target.value,
-                                  })
-                                }
-                                placeholder="Description"
-                              />
-                            ) : (
-                              medicine.description || (
-                                <span className="text-muted-foreground">-</span>
-                              )
-                            )}
-                          </td>
-
-                          <td className="p-3 text-right">
-                            {isEditing ? (
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={editValues.price}
-                                onChange={(e) =>
-                                  setEditValues({
-                                    ...editValues,
-                                    price: e.target.value,
-                                  })
-                                }
-                                className="text-right"
-                              />
-                            ) : (
-                              `₹${parseFloat(medicine.price).toFixed(2)}`
-                            )}
-                          </td>
-
-                          <td className="p-3 text-right">
-                            {isEditing ? (
-                              <Input
-                                type="number"
-                                min="0"
-                                value={editValues.stockQuantity}
-                                onChange={(e) =>
-                                  setEditValues({
-                                    ...editValues,
-                                    stockQuantity: e.target.value,
-                                  })
-                                }
-                                className="text-right"
-                              />
-                            ) : (
-                              medicine.stockQuantity
-                            )}
-                          </td>
-
-                          <td className="p-3">
-                            <div className="flex gap-2 justify-center">
+                        return (
+                          <tr
+                            key={medicine.id}
+                            className="border-b hover:bg-muted/50"
+                          >
+                            <td className="p-3">
                               {isEditing ? (
-                                <>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleSaveEdit(medicine.id)}
-                                    className="hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
-                                  >
-                                    <Save className="h-4 w-4 mr-1" />
-                                  </Button>
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={handleCancelEdit}
-                                    className="hover:bg-gray-100 hover:border-red-600 hover:text-red-600 text-white"
-                                  >
-                                    <Undo2 className="h-4 w-4 mr-1" />
-                                  </Button>
-                                </>
+                                <Input
+                                  value={editValues.name}
+                                  onChange={(e) =>
+                                    setEditValues({
+                                      ...editValues,
+                                      name: e.target.value,
+                                    })
+                                  }
+                                  placeholder="Medicine Name"
+                                />
                               ) : (
-                                <>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleEditClick(medicine)}
-                                    className="hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
-                                  >
-                                    <Edit className="h-4 w-4 mr-1" />
-                                  </Button>
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() =>
-                                      handleDeleteMedicine(medicine.id)
-                                    }
-                                    className="hover:bg-gray-100 hover:border-red-600 hover:text-red-600 text-white"
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-1" />
-                                  </Button>
-                                </>
+                                <span className="font-medium">
+                                  {medicine.name}
+                                </span>
                               )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                            </td>
+
+                            <td className="p-3">
+                              {isEditing ? (
+                                <Input
+                                  value={editValues.description}
+                                  onChange={(e) =>
+                                    setEditValues({
+                                      ...editValues,
+                                      description: e.target.value,
+                                    })
+                                  }
+                                  placeholder="Description"
+                                />
+                              ) : (
+                                medicine.description || (
+                                  <span className="text-muted-foreground">
+                                    -
+                                  </span>
+                                )
+                              )}
+                            </td>
+
+                            <td className="p-3 text-right">
+                              {isEditing ? (
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={editValues.price}
+                                  onChange={(e) =>
+                                    setEditValues({
+                                      ...editValues,
+                                      price: e.target.value,
+                                    })
+                                  }
+                                  className="text-right"
+                                />
+                              ) : (
+                                `₹${parseFloat(medicine.price).toFixed(2)}`
+                              )}
+                            </td>
+
+                            <td className="p-3 text-right">
+                              {isEditing ? (
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={editValues.stockQuantity}
+                                  onChange={(e) =>
+                                    setEditValues({
+                                      ...editValues,
+                                      stockQuantity: e.target.value,
+                                    })
+                                  }
+                                  className="text-right"
+                                />
+                              ) : (
+                                medicine.stockQuantity
+                              )}
+                            </td>
+
+                            <td className="p-3">
+                              <div className="flex gap-2 justify-center">
+                                {isEditing ? (
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        handleSaveEdit(medicine.id)
+                                      }
+                                      className="hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
+                                    >
+                                      <Save className="h-4 w-4 mr-1" />
+                                    </Button>
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={handleCancelEdit}
+                                      className="hover:bg-gray-100 hover:border-red-600 hover:text-red-600 text-white"
+                                    >
+                                      <Undo2 className="h-4 w-4 mr-1" />
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleEditClick(medicine)}
+                                      className="hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
+                                    >
+                                      <Edit className="h-4 w-4 mr-1" />
+                                    </Button>
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={() =>
+                                        handleDeleteClick(medicine.id)
+                                      }
+                                      className="hover:bg-gray-100 hover:border-red-600 hover:text-red-600 text-white"
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-1" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-6">
+                    <div className="text-sm text-muted-foreground">
+                      Showing {startIndex + 1} to{" "}
+                      {Math.min(startIndex + itemsPerPage, medicines.length)} of{" "}
+                      {medicines.length} medicines
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="flex items-center gap-1"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Button>
+
+                      <div className="flex items-center space-x-1">
+                        {renderPageNumbers().map((page, index) => {
+                          if (
+                            page === "ellipsis-start" ||
+                            page === "ellipsis-end"
+                          ) {
+                            return (
+                              <span
+                                key={`ellipsis-${index}`}
+                                className="px-2 text-muted-foreground"
+                              >
+                                ...
+                              </span>
+                            );
+                          }
+
+                          return (
+                            <Button
+                              key={page}
+                              variant={
+                                currentPage === page ? "default" : "outline"
+                              }
+                              size="sm"
+                              onClick={() => handlePageChange(page as number)}
+                              className="w-8 h-8 p-0"
+                            >
+                              {page}
+                            </Button>
+                          );
+                        })}
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="flex items-center gap-1"
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this medicine? This action cannot
+              be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancelDelete}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteMedicine}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

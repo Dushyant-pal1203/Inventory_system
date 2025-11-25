@@ -304,7 +304,7 @@ export default function GenerateInvoice() {
                 <div className="watermark">
                   <img src="images/logo.png" alt="Watermark" />
                 </div>
-                <div className="grid md:grid-cols-2 gap-6 mb-8">
+                <div className="grid md:grid-cols-2 mb-8">
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground mb-2">
                       BILL TO:
@@ -325,9 +325,9 @@ export default function GenerateInvoice() {
                     </div>
                   </div>
 
-                  <div className="md:text-right">
-                    <div className="space-y-1 text-sm">
-                      <div className="flex md:justify-end gap-2">
+                  <div className="flex items-end justify-end">
+                    <div className="space-y-1 text-sm w-[60%]">
+                      <div className="flex justify-between">
                         <span className="text-muted-foreground">Bill No:</span>
                         <span
                           className="font-medium"
@@ -336,13 +336,13 @@ export default function GenerateInvoice() {
                           {billNumber}
                         </span>
                       </div>
-                      <div className="flex md:justify-end gap-2">
+                      <div className="flex justify-between">
                         <span className="text-muted-foreground">
                           Issue Date:
                         </span>
                         <span className="font-medium">{issueDate}</span>
                       </div>
-                      <div className="flex md:justify-end gap-2">
+                      <div className="flex justify-between">
                         <span className="text-muted-foreground">
                           Total Amount Due:
                         </span>

@@ -208,6 +208,9 @@ export default function Home() {
   const cartTotal = cart.reduce((sum, item) => sum + item.amount, 0);
   const handleGoBack = () => {
     setLocation("/");
+    {
+      window.location.reload();
+    }
   };
 
   // Get available stock for display
@@ -224,7 +227,7 @@ export default function Home() {
   return (
     <div className="min-h-[86.1vh] bg-background pb-12 sm:min-h-auto">
       <div className="bg-primary text-primary-foreground py-6 px-4 shadow-md fixed top-0 left-0 w-full z-10">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <Button
             variant="ghost"
             onClick={handleGoBack}

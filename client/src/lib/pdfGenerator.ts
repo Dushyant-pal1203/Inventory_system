@@ -48,99 +48,122 @@ export async function generateInvoicePDF(data: InvoiceData) {
   // Load logo
   const logoBase64 = await getLogoBase64();
 
-  // Header box
-  doc.setFillColor(...primaryGreen);
-  doc.roundedRect(0, 0, pageWidth, 40, 0, 0, "F");
+  // Function to add header and watermark to any page
+  const addPageHeader = (isFirstPage: boolean = false) => {
+    if (isFirstPage) {
+      // Header box only on first page
+      doc.setFillColor(...primaryGreen);
+      doc.roundedRect(0, 0, pageWidth, 40, 0, 0, "F");
 
-  // Add logo
-  if (logoBase64) {
-    try {
-      doc.addImage(logoBase64, "PNG", 3, 2, 35, 30);
-    } catch {
-      console.log("Logo could not be added");
+      // Add logo only on first page
+      if (logoBase64) {
+        try {
+          doc.addImage(logoBase64, "PNG", 3, 2, 32, 30);
+        } catch {
+          console.log("Logo could not be added");
+        }
+      }
+
+      // Header text only on first page
+      doc.setTextColor(...white);
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("MALKANI HEALTH OF ELECTROHOMEOPATHY &", 45, 10);
+      doc.text("RESEARCH CENTRE", 45, 18);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text("(64, Street No. 2, Vill- Sadipur Delhi 110094.)", 45, 26);
+
+      doc.setFontSize(8);
+      doc.text("GSTIN:", 45, 30);
+      doc.setFont("helvetica", "bold");
+      doc.text("07AHCPM0625Q1Z5", 58, 30);
+
+      // Invoice Title only on first page
+      doc.setTextColor(...black);
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "bold");
+      doc.text("INVOICE", pageWidth / 2, 50, { align: "center" });
     }
-  }
 
-  // Header text
-  doc.setTextColor(...white); // FIXED
-  doc.setFontSize(19);
+    // Watermark on every page
+    if (logoBase64) {
+      try {
+        doc.saveGraphicsState();
+        doc.setGState(new (doc as any).GState({ opacity: 0.08 }));
+        doc.addImage(
+          logoBase64,
+          "PNG",
+          (pageWidth - 80) / 2,
+          (pageHeight - 80) / 2,
+          80,
+          70
+        );
+        doc.restoreGraphicsState();
+      } catch {
+        console.log("Watermark could not be added");
+      }
+    }
+  };
+  // Add header to first page
+  addPageHeader(true);
+
+  // BILL TO SECTION (only on first page)
+  yPosition = 60; // Adjusted for invoice title
+  const leftColumnX = 20;
   doc.setFont("helvetica", "bold");
-  doc.text("MALKANI HEALTH OF ELECTROHOMEOPATHY &", 45, 10);
-  doc.text("RESEARCH CENTRE", 45, 18);
+  doc.setFontSize(11);
+  doc.setTextColor(...grayText);
+  doc.text("BILL TO:", leftColumnX, yPosition);
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text("(64, Street No. 2, Vill- Sadipur Delhi 110094.)", 45, 26);
-
-  doc.setFontSize(8);
-  doc.text("GSTIN:", 45, 30);
-  doc.setFont("helvetica", "bold");
-  doc.text("07AHCPM0625Q1Z5", 55, 30);
-
-  // Watermark
-  if (logoBase64) {
-    try {
-      doc.saveGraphicsState();
-      doc.setGState(new (doc as any).GState({ opacity: 0.08 }));
-      doc.addImage(
-        logoBase64,
-        "PNG",
-        (pageWidth - 80) / 2,
-        (pageHeight - 80) / 2,
-        80,
-        70
-      );
-      doc.restoreGraphicsState();
-    } catch {
-      console.log("Watermark could not be added");
-    }
-  }
-
-  // Invoice Title
-  yPosition = 55;
   doc.setTextColor(...black);
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  const title = "INVOICE";
-  doc.text(title, pageWidth / 2, yPosition, { align: "center" });
-
-  // BILL TO SECTION
-  yPosition += 15;
-  doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text("BILL TO:", 20, yPosition);
+  doc.text(data.clientName, leftColumnX, yPosition + 6);
 
-  doc.text("Bill No:", pageWidth - 80, yPosition);
+  const addrLines = doc.splitTextToSize(data.clientAddress, 80);
+  doc.text(addrLines, leftColumnX, yPosition + 12);
+
+  const addressHeight = addrLines.length * 4;
+  doc.text(data.clientPhone, leftColumnX, yPosition + 12 + addressHeight);
+
+  // Right Column - Bill Details (only on first page)
+  const rightColumnX = pageWidth - 80;
   doc.setFont("helvetica", "normal");
-  doc.text(data.billNumber, pageWidth - 45, yPosition);
+  doc.setFontSize(10);
+  doc.setTextColor(...grayText);
 
-  yPosition += 6;
-  doc.text(data.clientName, 20, yPosition);
-
+  // Bill No
+  yPosition += 5;
+  doc.text("Bill No:", rightColumnX, yPosition);
   doc.setFont("helvetica", "bold");
-  doc.text("Issue Date:", pageWidth - 80, yPosition);
-  doc.setFont("helvetica", "normal");
-  doc.text(data.issueDate, pageWidth - 45, yPosition);
-
-  yPosition += 6;
-  const addrLines = doc.splitTextToSize(data.clientAddress, 70);
-  doc.text(addrLines, 20, yPosition);
-
-  yPosition += addrLines.length * 6;
-  doc.text(data.clientPhone, 20, yPosition);
-
-  // TOTAL DUE
-  yPosition += 2;
-  doc.setFont("helvetica", "bold");
-  doc.text("Total Amount Due:", pageWidth - 80, yPosition);
-  doc.setTextColor(...primaryGreen);
-  doc.text(`Rs. ${data.totalDue.toFixed(2)}`, pageWidth - 28, yPosition, {
-    align: "right",
-  });
   doc.setTextColor(...black);
+  doc.text(data.billNumber, rightColumnX + 33, yPosition);
+
+  // Issue Date
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...grayText);
+  doc.text("Issue Date:", rightColumnX, yPosition + 6);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...black);
+  doc.text(data.issueDate, rightColumnX + 33, yPosition + 6);
+
+  // Total Amount Due
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...grayText);
+  doc.text("Total Amount Due:", rightColumnX, yPosition + 12);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...primaryGreen);
+  doc.text(
+    `Rs. ${data.totalDue.toFixed(2)}`,
+    rightColumnX + 50,
+    yPosition + 12,
+    { align: "right" }
+  );
 
   // TABLE HEADER
-  yPosition += 12;
+  yPosition += 25;
   doc.setFillColor(...primaryGreen);
   doc.rect(15, yPosition, pageWidth - 30, 8, "F");
 
@@ -160,6 +183,38 @@ export async function generateInvoicePDF(data: InvoiceData) {
   let rowColor = true;
 
   data.items.forEach((item, index) => {
+    // Check if we need a new page before adding this item
+    if (yPosition > pageHeight - 120 && index < data.items.length - 1) {
+      doc.addPage();
+      yPosition = 20;
+
+      // Add header and watermark to new page
+      addPageHeader(false);
+
+      // Reset text color and font for table content
+      doc.setTextColor(...black);
+      doc.setFont("helvetica", "normal");
+
+      // Add table header on new page
+      doc.setFillColor(...primaryGreen);
+      doc.rect(15, yPosition, pageWidth - 30, 8, "F");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(...white);
+      doc.text("Description", 20, yPosition + 5.5);
+      doc.text("Quantity", pageWidth / 2 - 15, yPosition + 5.5);
+      doc.text("Rate (Rs.)", pageWidth / 2 + 25, yPosition + 5.5);
+      doc.text("Amount", pageWidth - 30, yPosition + 5.5, { align: "right" });
+
+      yPosition += 8;
+      rowColor = true;
+
+      // Reset text color for items
+      doc.setTextColor(...black);
+      doc.setFont("helvetica", "normal");
+    }
+
     if (rowColor) {
       doc.setFillColor(...lightGray);
       doc.rect(15, yPosition, pageWidth - 30, 7, "F");
@@ -177,19 +232,26 @@ export async function generateInvoicePDF(data: InvoiceData) {
 
     yPosition += 7;
     rowColor = !rowColor;
-
-    // NEW PAGE IF NEEDED
-    if (yPosition > pageHeight - 80 && index < data.items.length - 1) {
-      doc.addPage();
-      yPosition = 20;
-      rowColor = true;
-    }
   });
+
+  // Check if we need a new page for the summary section
+  if (yPosition > pageHeight - 100) {
+    doc.addPage();
+    yPosition = 20;
+    addPageHeader(false);
+
+    // Reset text color and font
+    doc.setTextColor(...black);
+    doc.setFont("helvetica", "normal");
+  }
 
   // SUMMARY
   yPosition += 10;
   const summaryX = pageWidth - 70;
 
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(...black);
   doc.text("Sub Total", summaryX, yPosition);
   doc.text(`Rs. ${data.subtotal.toFixed(2)}`, pageWidth - 30, yPosition, {
     align: "right",
@@ -210,23 +272,46 @@ export async function generateInvoicePDF(data: InvoiceData) {
   });
   doc.setTextColor(...black);
 
+  // Notes Section - Check if we need a new page
+  if (yPosition > pageHeight - 60) {
+    doc.addPage();
+    yPosition = 20;
+    addPageHeader(false);
+
+    // Reset text color and font
+    doc.setTextColor(...black);
+    doc.setFont("helvetica", "normal");
+  } else {
+    yPosition += 15; // Add some space before the notes section
+  }
+
+  doc.setDrawColor(220, 220, 220);
+  doc.line(15, yPosition, pageWidth - 15, yPosition);
+  yPosition += 10;
+
   // Notes
-  yPosition += 100;
   doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...black);
   doc.text("Our Payment Methods:", 20, yPosition);
 
   yPosition += 5;
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
+  doc.setFontSize(9);
+  doc.setTextColor(...grayText);
   doc.text("Bank, BHIM #, PhonePe, Google Pay, NetBanking", 20, yPosition);
 
   // Notes section
   yPosition += 10;
   doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...black);
   doc.text("NOTES:", 20, yPosition);
   yPosition += 5;
 
   doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...grayText);
   doc.text("Goods once sold will not be returned.", 20, yPosition);
   yPosition += 4;
   doc.text(
@@ -240,35 +325,42 @@ export async function generateInvoicePDF(data: InvoiceData) {
     20,
     yPosition
   );
-  // Thank you and signature section
 
+  // Thank you and signature section
+  yPosition += 8;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.setTextColor(black[0], black[1], black[2]);
+  doc.setTextColor(...black);
   doc.text("Dr. Suresh Malkani", pageWidth - 55, yPosition);
   yPosition += 5;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.setTextColor(grayText[0], grayText[1], grayText[2]);
-  doc.text("Authorized Signer", pageWidth - 55, yPosition);
+  doc.setTextColor(...grayText);
+  doc.text("Authorized Signer", pageWidth - 50, yPosition);
   yPosition += 4;
   doc.setFontSize(9);
-  doc.setTextColor(grayText[0], grayText[1], grayText[2]);
+  doc.setTextColor(...grayText);
   doc.setFont("helvetica", "normal");
   doc.text("Thank you for your time & business!", pageWidth / 2, yPosition, {
     align: "center",
   });
 
-  // Footer
-  const footerY = pageHeight - 15;
-  doc.setFillColor(...primaryGreen);
-  doc.rect(0, footerY, pageWidth, 15, "F");
+  // Footer - Always on the last page
+  const currentPage = doc.getCurrentPageInfo().pageNumber;
+  const totalPages = doc.getNumberOfPages();
 
-  doc.setTextColor(...white);
-  doc.setFontSize(8);
-  const contact =
-    "malkani.clinic@gmail.com | +91-9839239874 | +91-8800100378 | www.electrohomeopathy.in";
-  doc.text(contact, pageWidth / 2, footerY + 9, { align: "center" });
+  // Only add footer if this is the last page
+  if (currentPage === totalPages) {
+    const footerY = pageHeight - 15;
+    doc.setFillColor(...primaryGreen);
+    doc.rect(0, footerY, pageWidth, 15, "F");
+
+    doc.setTextColor(...white);
+    doc.setFontSize(8);
+    const contact =
+      "malkani.clinic@gmail.com | +91-9839239874 | +91-8800100378 | www.electrohomeopathy.in";
+    doc.text(contact, pageWidth / 2, footerY + 9, { align: "center" });
+  }
 
   doc.save(`Invoice_${data.billNumber}.pdf`);
 }
