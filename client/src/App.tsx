@@ -8,6 +8,7 @@ import Invoice from "@/pages/invoice";
 import NotFound from "@/pages/not-found";
 import Inventory from "./pages/inventory";
 import GenerateInvoice from "./pages/generate_invoice";
+import Bills from "./pages/bills";
 // import Banner from "./components/banner";
 import Footer from "./components/footer";
 
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/invoice" component={Invoice} />
       <Route path="/inventory" component={Inventory} />
       <Route path="/generate-invoice" component={GenerateInvoice} />
+      <Route path="/bills" component={Bills} />
       <Route component={NotFound} />
     </Switch>
   );

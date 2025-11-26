@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Trash2,
   Plus,
@@ -14,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Upload,
+  Download,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMedicines } from "../hooks/se-medicines";
@@ -62,10 +64,23 @@ export default function Inventory() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [medicineToDelete, setMedicineToDelete] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  // New state for CSV upload modal
+  const [csvModalOpen, setCsvModalOpen] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Load "Don't show again" preference from localStorage on component mount
+  useEffect(() => {
+    const savedPreference = localStorage.getItem("csvUploadDontShowAgain");
+    if (savedPreference === "true") {
+      setDontShowAgain(true);
+    }
+  }, []);
 
   const handleAddRow = () => {
     setRows([...rows, { name: "", description: "", price: "", quantity: "" }]);
@@ -231,6 +246,30 @@ export default function Inventory() {
     setMedicineToDelete(null);
   };
 
+  // Handle CSV upload button click
+  const handleUploadCsvClick = () => {
+    if (dontShowAgain) {
+      // If "Don't show again" is checked, directly trigger file input
+      document.getElementById("csv-upload")?.click();
+    } else {
+      // Otherwise, show the modal
+      setCsvModalOpen(true);
+    }
+  };
+
+  // Handle CSV modal confirmation
+  const handleCsvModalConfirm = () => {
+    setCsvModalOpen(false);
+
+    if (dontShowAgain) {
+      localStorage.setItem("csvUploadDontShowAgain", "true");
+    }
+
+    setTimeout(() => {
+      document.getElementById("csv-upload")?.click();
+    }, 0);
+  };
+
   // CSV file upload handler
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -296,7 +335,7 @@ export default function Inventory() {
         // Validate required fields
         if (!medicine.name || !medicine.price || !medicine.quantity) {
           errorRows.push(`Row ${i + 1}: Missing required fields`);
-          return; // Skip to next row
+          continue; // Skip to next row
         }
 
         const price = parseFloat(medicine.price);
@@ -304,12 +343,12 @@ export default function Inventory() {
 
         if (isNaN(price) || price < 0) {
           errorRows.push(`Row ${i + 1}: Invalid price value`);
-          return;
+          continue;
         }
 
         if (isNaN(quantity) || quantity < 0) {
           errorRows.push(`Row ${i + 1}: Invalid quantity value`);
-          return;
+          continue;
         }
 
         medicines.push({
@@ -383,6 +422,54 @@ export default function Inventory() {
     } finally {
       setUploading(false);
       event.target.value = "";
+    }
+  };
+
+  // Export CSV function
+  const handleExportCSV = async () => {
+    setExporting(true);
+    try {
+      // Create CSV content
+      const headers = ["Name", "Description", "Price", "Quantity"];
+      const csvContent = [
+        headers.join(","),
+        ...medicines.map((medicine) =>
+          [
+            `"${medicine.name.replace(/"/g, '""')}"`,
+            `"${(medicine.description || "").replace(/"/g, '""')}"`,
+            medicine.price,
+            medicine.stockQuantity,
+          ].join(",")
+        ),
+      ].join("\n");
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute(
+        "download",
+        `medicines-export-${new Date().toISOString().split("T")[0]}.csv`
+      );
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "Export Successful",
+        description: `Exported ${medicines.length} medicines to CSV file`,
+      });
+    } catch (error) {
+      console.error("Export error:", error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export medicines to CSV",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -570,17 +657,22 @@ export default function Inventory() {
 
             <div className="flex flex-col sm:flex-row justify-between gap-4 mt-6">
               <div className="flex gap-4">
-                <Button variant="outline" onClick={handleAddRow}>
+                <Button
+                  variant="outline"
+                  onClick={handleAddRow}
+                  className="hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
+                >
                   <Plus className="h-4 w-4 mr-2" /> Add Row
                 </Button>
 
                 {/* CSV Upload Button */}
                 <Button
-                  variant="outline"
-                  onClick={() => document.getElementById("csv-upload")?.click()}
+                  variant="destructive"
+                  className="hover:bg-gray-100 hover:border-red-600 hover:text-red-600 text-white"
+                  onClick={handleUploadCsvClick}
                   disabled={uploading}
                 >
-                  <Upload className="h-4 w-4 mr-2" />
+                  <Download className="h-4 w-4" />
                   {uploading ? "Uploading..." : "Upload CSV"}
                   <Input
                     id="csv-upload"
@@ -596,28 +688,6 @@ export default function Inventory() {
                 {saving ? "Saving..." : "Save Medicines"}
               </Button>
             </div>
-
-            {/* CSV Format Help */}
-            {/* <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-              <h4 className="font-medium text-blue-800 mb-2">
-                CSV File Format:
-              </h4>
-              <p className="text-sm text-blue-700 mb-2">
-                Your CSV file should have the following columns:{" "}
-                <strong>name, price, quantity</strong> (description is optional)
-              </p>
-              <div className="text-xs bg-white p-2 rounded border">
-                <code>
-                  name,description,price,quantity
-                  <br />
-                  Paracetamol,Pain relief medicine,25.50,100
-                  <br />
-                  Aspirin,Headache medicine,15.75,50
-                  <br />
-                  Vitamin C,Immune booster,12.00,200
-                </code>
-              </div>
-            </div> */}
           </CardContent>
         </Card>
 
@@ -800,62 +870,90 @@ export default function Inventory() {
                       {Math.min(startIndex + itemsPerPage, medicines.length)} of{" "}
                       {medicines.length} medicines
                     </div>
+                    {/* Export CSV Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExportCSV}
+                      disabled={exporting || medicines.length === 0}
+                      className="flex items-center gap-1 hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      {exporting ? "Exporting..." : "Export CSV"}
+                    </Button>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className="flex items-center gap-1 hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                          Previous
+                        </Button>
 
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="flex items-center gap-1"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                        Previous
-                      </Button>
+                        <div className="flex items-center space-x-1">
+                          {renderPageNumbers().map((page, index) => {
+                            if (
+                              page === "ellipsis-start" ||
+                              page === "ellipsis-end"
+                            ) {
+                              return (
+                                <span
+                                  key={`ellipsis-${index}`}
+                                  className="px-2 text-muted-foreground"
+                                >
+                                  ...
+                                </span>
+                              );
+                            }
 
-                      <div className="flex items-center space-x-1">
-                        {renderPageNumbers().map((page, index) => {
-                          if (
-                            page === "ellipsis-start" ||
-                            page === "ellipsis-end"
-                          ) {
                             return (
-                              <span
-                                key={`ellipsis-${index}`}
-                                className="px-2 text-muted-foreground"
+                              <Button
+                                key={page}
+                                variant={
+                                  currentPage === page ? "default" : "outline"
+                                }
+                                size="sm"
+                                onClick={() => handlePageChange(page as number)}
+                                className="w-8 h-8 p-0"
                               >
-                                ...
-                              </span>
+                                {page}
+                              </Button>
                             );
-                          }
+                          })}
+                        </div>
 
-                          return (
-                            <Button
-                              key={page}
-                              variant={
-                                currentPage === page ? "default" : "outline"
-                              }
-                              size="sm"
-                              onClick={() => handlePageChange(page as number)}
-                              className="w-8 h-8 p-0"
-                            >
-                              {page}
-                            </Button>
-                          );
-                        })}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className="flex items-center gap-1 hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
                       </div>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="flex items-center gap-1"
-                      >
-                        Next
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
                     </div>
+                  </div>
+                )}
+
+                {/* Export button for when there's only one page */}
+                {totalPages <= 1 && medicines.length > 0 && (
+                  <div className="flex justify-end mt-6">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExportCSV}
+                      disabled={exporting}
+                      className="flex items-center gap-1"
+                    >
+                      <Download className="h-4 w-4" />
+                      {exporting ? "Exporting..." : "Export CSV"}
+                    </Button>
                   </div>
                 )}
               </>
@@ -881,6 +979,58 @@ export default function Inventory() {
             <Button variant="destructive" onClick={handleDeleteMedicine}>
               Delete
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CSV Upload Help Modal */}
+      <Dialog open={csvModalOpen} onOpenChange={setCsvModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>CSV File Format</DialogTitle>
+            <DialogDescription>
+              Please ensure your CSV file follows the correct format for
+              successful upload.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+            <h4 className="font-medium text-blue-800 mb-2">CSV File Format:</h4>
+            <p className="text-sm text-blue-700 mb-2">
+              Your CSV file should have the following columns:{" "}
+              <strong>name, price, quantity</strong> (description is optional)
+            </p>
+            <div className="text-xs bg-white p-2 rounded border">
+              <code>
+                name,description,price,quantity
+                <br />
+                Paracetamol,Pain relief medicine,25.50,100
+                <br />
+                Aspirin,Headache medicine,15.75,50
+                <br />
+                Vitamin C,Immune booster,12.00,200
+              </code>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2 mt-4">
+            <Checkbox
+              id="dont-show-again"
+              checked={dontShowAgain}
+              onCheckedChange={(checked) =>
+                setDontShowAgain(checked as boolean)
+              }
+            />
+            <Label htmlFor="dont-show-again" className="text-sm">
+              Don't show this message again
+            </Label>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setCsvModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCsvModalConfirm}>OK</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

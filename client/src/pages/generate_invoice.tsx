@@ -80,7 +80,7 @@ export default function GenerateInvoice() {
   const taxPercentage = 5;
   const taxAmount = subtotal * (taxPercentage / 100);
   const totalDue = subtotal + taxAmount;
-
+  const totalItems = cart.length;
   const billNumber = `INV-${Date.now()}`;
   const issueDate = new Date().toLocaleDateString("en-IN", {
     day: "2-digit",
@@ -399,6 +399,10 @@ export default function GenerateInvoice() {
 
                 <div className="flex justify-end mb-8">
                   <div className="w-full md:w-1/2 space-y-3">
+                    <div className="flex justify-between items-center pb-2">
+                      <span className="text-muted-foreground">Total Items</span>
+                      <span className="font-medium">{totalItems}</span>
+                    </div>
                     <div className="flex justify-between items-center pb-2">
                       <span className="text-muted-foreground">Sub Total</span>
                       <span className="font-medium" data-testid="text-subtotal">
