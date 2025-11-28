@@ -11,6 +11,7 @@ import GenerateInvoice from "./pages/generate_invoice";
 import Bills from "./pages/bills";
 // import Banner from "./components/banner";
 import Footer from "./components/footer";
+import contact_us from "./pages/contact_us";
 
 function Router() {
   return (
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/inventory" component={Inventory} />
       <Route path="/generate-invoice" component={GenerateInvoice} />
       <Route path="/bills" component={Bills} />
+      <Route path="/contact_us" component={contact_us} />
       <Route component={NotFound} />
     </Switch>
   );

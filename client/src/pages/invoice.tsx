@@ -225,249 +225,302 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-[86.1vh] bg-background pb-12 sm:min-h-auto">
-      <div className="bg-primary text-primary-foreground py-6 px-4 shadow-md fixed top-0 left-0 w-full z-10">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-          <Button
-            variant="ghost"
-            onClick={handleGoBack}
-            data-testid="button-back"
-            className="text-primary-foreground border-primary-foreground/20"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            Back
-          </Button>
-          <div
-            onClick={() => {
-              window.location.href = "/";
-            }}
-            className="hidden sm:block cursor-pointer"
-          >
-            <img
-              src="images/logo.png"
-              alt="Logo"
-              className="w-[50px] h-[45px]"
-            />
-          </div>
-          <h1 className="text-2xl md:text-3xl font-bold">Invoice Creation</h1>
-        </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-4 py-8 md:py-12 mt-[70px]">
-        <div className="grid md:grid-cols-2 gap-6 md:gap-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl">Select Medicines</CardTitle>
-              <CardDescription>
-                Choose medicine and quantity to add to your order
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label
-                  htmlFor="medicine-select"
-                  className="text-sm font-medium"
-                >
-                  Medicine Name
-                </Label>
-                <Select
-                  value={selectedMedicineId}
-                  onValueChange={setSelectedMedicineId}
-                  disabled={isLoading}
-                >
-                  <SelectTrigger
-                    id="medicine-select"
-                    data-testid="select-medicine"
-                    className="w-full"
+    <>
+      <div className="min-h-[100vh] bg-background p-[20px] sm:p-0 sm:min-h-[80.6vh]">
+        {/* ---------- HEADER ---------- */}
+        <div className="w-full  tems-center justify-between gap-4 fixed top-[60px] left-0 !z-10">
+          <div className="max-w-6xl mx-auto ">
+            <nav>
+              <ul className="flex items-center justify-end space-x-4 mt-2">
+                <li>
+                  <Button onClick={() => (window.location.href = "/")}>
+                    Home
+                  </Button>
+                </li>
+                <li>
+                  <Button onClick={() => (window.location.href = "/inventory")}>
+                    Inventory
+                  </Button>
+                </li>
+                <li>
+                  <Button
+                    variant="outline"
+                    onClick={() => (window.location.href = "/invoice")}
+                    className="text-primary !border-primary"
                   >
-                    <SelectValue
-                      placeholder={
-                        isLoading ? "Loading medicines..." : "Select a medicine"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {medicines?.map((medicine) => (
-                      <SelectItem key={medicine.id} value={medicine.id}>
-                        {medicine.name} - ₹
-                        {parseFloat(medicine.price).toFixed(2)}
-                        {medicine.stockQuantity > 0
-                          ? ` (Stock: ${medicine.stockQuantity})`
-                          : " - Out of Stock"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                    Invoice
+                  </Button>
+                </li>
+                <li>
+                  <Button onClick={() => (window.location.href = "/bills")}>
+                    Bills
+                  </Button>
+                </li>
+                <li>
+                  <Button
+                    onClick={() => (window.location.href = "/contact_us")}
+                  >
+                    Contact Us
+                  </Button>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <div className="bg-primary text-primary-foreground py-2 px-4 shadow-md fixed top-0 left-0 w-full z-10">
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+            <Button
+              variant="ghost"
+              onClick={handleGoBack}
+              data-testid="button-back"
+              className="text-primary-foreground border-primary-foreground/20"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              Back
+            </Button>
+            <div
+              onClick={() => {
+                window.location.href = "/";
+              }}
+              className="hidden sm:block cursor-pointer"
+            >
+              <img
+                src="images/logo.png"
+                alt="Logo"
+                className="w-[65px] h-[55px]"
+              />
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold">Invoice Creation</h1>
+          </div>
+        </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="quantity-input" className="text-sm font-medium">
-                  Quantity
-                </Label>
-                <Input
-                  id="quantity-input"
-                  data-testid="input-quantity"
-                  type="number"
-                  min="1"
-                  max={
-                    selectedMedicineId
-                      ? getAvailableStock(selectedMedicineId)
-                      : undefined
-                  }
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                  className="w-full"
-                  placeholder="Enter quantity"
-                />
-                {selectedMedicineId && (
-                  <p className="text-xs text-muted-foreground">
-                    Available stock: {getAvailableStock(selectedMedicineId)}{" "}
-                    units
-                  </p>
-                )}
-              </div>
-
-              <Button
-                onClick={handleAddToCart}
-                disabled={
-                  isLoading ||
-                  !selectedMedicineId ||
-                  getAvailableStock(selectedMedicineId) === 0
-                }
-                className="w-full"
-                size="lg"
-                data-testid="button-add-medicine"
-              >
-                <Plus className="h-5 w-5" />
-                Add to Cart
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-2xl">
-                <ShoppingCart className="h-6 w-6" />
-                Cart Summary
-              </CardTitle>
-              <CardDescription>
-                {cart.length === 0
-                  ? "No items added yet"
-                  : `${cart.length} item${cart.length > 1 ? "s" : ""} in cart`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {cart.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">Your cart is empty</p>
-                  <p className="text-xs mt-1">Add medicines to get started</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Stock Error Alert */}
-                  {stockErrors.length > 0 && (
-                    <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-                      <div className="flex items-center gap-2 text-destructive mb-2">
-                        <AlertTriangle className="h-4 w-4" />
-                        <span className="font-medium">Stock Issues</span>
-                      </div>
-                      <div className="space-y-1 text-sm">
-                        {stockErrors.map((error, index) => (
-                          <p key={index}>{error.message}</p>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                    {cart.map((item) => {
-                      const stockError = getStockError(item.medicineId);
-                      const availableStock = getAvailableStock(item.medicineId);
-
-                      return (
-                        <div
-                          key={item.medicineId}
-                          data-testid={`cart-item-${item.medicineId}`}
-                          className={`flex items-start justify-between gap-3 p-3 rounded-lg border ${
-                            stockError
-                              ? "bg-destructive/10 border-destructive/20"
-                              : "bg-muted/50 border-border"
-                          }`}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">
-                              {item.medicineName}
-                            </p>
-                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                              <span>Qty: {item.quantity}</span>
-                              <span>×</span>
-                              <span>₹{item.rate.toFixed(2)}</span>
-                            </div>
-                            <div className="flex items-center gap-1 mt-1">
-                              <span className="text-xs">
-                                Available: {availableStock} units
-                              </span>
-                              {stockError && (
-                                <AlertTriangle className="h-3 w-3 text-destructive" />
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm whitespace-nowrap">
-                              ₹{item.amount.toFixed(2)}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() =>
-                                handleRemoveFromCart(item.medicineId)
-                              }
-                              data-testid={`button-remove-${item.medicineId}`}
-                              className="h-8 w-8 text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="pt-4 border-t border-border">
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="text-lg font-semibold">Total</span>
-                      <span
-                        className="text-2xl font-bold text-primary"
-                        data-testid="text-cart-total"
-                      >
-                        ₹{cartTotal.toFixed(2)}
-                      </span>
-                    </div>
-
-                    <Button
-                      onClick={handleProceedToInvoice}
+        {/* ---------- MAIN CONTENT ---------- */}
+        <div className="max-w-6xl mx-auto space-y-10 mt-[120px]">
+          <div className="grid md:grid-cols-2 gap-6 md:gap-8">
+            {/* Select Medicines */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl">Select Medicines</CardTitle>
+                <CardDescription>
+                  Choose medicine and quantity to add to your order
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="medicine-select"
+                    className="text-sm font-medium"
+                  >
+                    Medicine Name
+                  </Label>
+                  <Select
+                    value={selectedMedicineId}
+                    onValueChange={setSelectedMedicineId}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger
+                      id="medicine-select"
+                      data-testid="select-medicine"
                       className="w-full"
-                      size="lg"
-                      data-testid="button-proceed"
-                      disabled={stockErrors.length > 0}
                     >
-                      Proceed to Invoice
-                      <ArrowRight className="h-5 w-5" />
-                    </Button>
-
-                    {stockErrors.length > 0 && (
-                      <p className="text-xs text-destructive text-center mt-2">
-                        Please resolve stock issues before proceeding
-                      </p>
-                    )}
-                  </div>
+                      <SelectValue
+                        placeholder={
+                          isLoading
+                            ? "Loading medicines..."
+                            : "Select a medicine"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {medicines?.map((medicine) => (
+                        <SelectItem key={medicine.id} value={medicine.id}>
+                          {medicine.name} - ₹
+                          {parseFloat(medicine.price).toFixed(2)}
+                          {medicine.stockQuantity > 0
+                            ? ` (Stock: ${medicine.stockQuantity})`
+                            : " - Out of Stock"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="quantity-input"
+                    className="text-sm font-medium"
+                  >
+                    Quantity
+                  </Label>
+                  <Input
+                    id="quantity-input"
+                    data-testid="input-quantity"
+                    type="number"
+                    min="1"
+                    max={
+                      selectedMedicineId
+                        ? getAvailableStock(selectedMedicineId)
+                        : undefined
+                    }
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    className="w-full"
+                    placeholder="Enter quantity"
+                  />
+                  {selectedMedicineId && (
+                    <p className="text-xs text-muted-foreground">
+                      Available stock: {getAvailableStock(selectedMedicineId)}{" "}
+                      units
+                    </p>
+                  )}
+                </div>
+
+                <Button
+                  onClick={handleAddToCart}
+                  disabled={
+                    isLoading ||
+                    !selectedMedicineId ||
+                    getAvailableStock(selectedMedicineId) === 0
+                  }
+                  className="w-full"
+                  size="lg"
+                  data-testid="button-add-medicine"
+                >
+                  <Plus className="h-5 w-5" />
+                  Add to Cart
+                </Button>
+              </CardContent>
+            </Card>
+            {/* Cart Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-2xl">
+                  <ShoppingCart className="h-6 w-6" />
+                  Cart Summary
+                </CardTitle>
+                <CardDescription>
+                  {cart.length === 0
+                    ? "No items added yet"
+                    : `${cart.length} item${
+                        cart.length > 1 ? "s" : ""
+                      } in cart`}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {cart.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p className="text-sm">Your cart is empty</p>
+                    <p className="text-xs mt-1">Add medicines to get started</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Stock Error Alert */}
+                    {stockErrors.length > 0 && (
+                      <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                        <div className="flex items-center gap-2 text-destructive mb-2">
+                          <AlertTriangle className="h-4 w-4" />
+                          <span className="font-medium">Stock Issues</span>
+                        </div>
+                        <div className="space-y-1 text-sm">
+                          {stockErrors.map((error, index) => (
+                            <p key={index}>{error.message}</p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                      {cart.map((item) => {
+                        const stockError = getStockError(item.medicineId);
+                        const availableStock = getAvailableStock(
+                          item.medicineId
+                        );
+
+                        return (
+                          <div
+                            key={item.medicineId}
+                            data-testid={`cart-item-${item.medicineId}`}
+                            className={`flex items-start justify-between gap-3 p-3 rounded-lg border ${
+                              stockError
+                                ? "bg-destructive/10 border-destructive/20"
+                                : "bg-muted/50 border-border"
+                            }`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">
+                                {item.medicineName}
+                              </p>
+                              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                <span>Qty: {item.quantity}</span>
+                                <span>×</span>
+                                <span>₹{item.rate.toFixed(2)}</span>
+                              </div>
+                              <div className="flex items-center gap-1 mt-1">
+                                <span className="text-xs">
+                                  Available: {availableStock} units
+                                </span>
+                                {stockError && (
+                                  <AlertTriangle className="h-3 w-3 text-destructive" />
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-sm whitespace-nowrap">
+                                ₹{item.amount.toFixed(2)}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                  handleRemoveFromCart(item.medicineId)
+                                }
+                                data-testid={`button-remove-${item.medicineId}`}
+                                className="h-8 w-8 text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="pt-4 border-t border-border">
+                      <div className="flex justify-between items-center mb-4">
+                        <span className="text-lg font-semibold">Total</span>
+                        <span
+                          className="text-2xl font-bold text-primary"
+                          data-testid="text-cart-total"
+                        >
+                          ₹{cartTotal.toFixed(2)}
+                        </span>
+                      </div>
+
+                      <Button
+                        onClick={handleProceedToInvoice}
+                        className="w-full"
+                        size="lg"
+                        data-testid="button-proceed"
+                        disabled={stockErrors.length > 0}
+                      >
+                        Proceed to Invoice
+                        <ArrowRight className="h-5 w-5" />
+                      </Button>
+
+                      {stockErrors.length > 0 && (
+                        <p className="text-xs text-destructive text-center mt-2">
+                          Please resolve stock issues before proceeding
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

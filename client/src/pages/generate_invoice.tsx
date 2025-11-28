@@ -211,7 +211,7 @@ export default function GenerateInvoice() {
             <h1 className="text-2xl md:text-3xl font-bold">Generate Invoice</h1>
           </div>
           {invoiceGenerated && (
-            <div className="bg-green-600 px-3 py-1 rounded-full text-xs">
+            <div className="bg-primary px-3 py-1 rounded-full text-xs">
               Stock Updated
             </div>
           )}
@@ -229,7 +229,7 @@ export default function GenerateInvoice() {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="client-name">
-                      Client Name <span className="text-red-600">*</span>
+                      Client Name <span className="text-secondary">*</span>
                     </Label>
                     <Input
                       id="client-name"
@@ -242,7 +242,7 @@ export default function GenerateInvoice() {
 
                   <div className="space-y-2">
                     <Label htmlFor="client-phone">
-                      Phone Number <span className="text-red-600">*</span>
+                      Phone Number <span className="text-secondary">*</span>
                     </Label>
                     <Input
                       id="client-phone"
@@ -256,7 +256,7 @@ export default function GenerateInvoice() {
 
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="client-address">
-                      Address <span className="text-red-600">*</span>
+                      Address <span className="text-secondary">*</span>
                     </Label>
                     <Input
                       id="client-address"
@@ -500,7 +500,7 @@ export default function GenerateInvoice() {
         ) : (
           <Card className="text-center py-12">
             <CardContent>
-              <div className="text-green-600 mb-4">
+              <div className="text-primary mb-4">
                 <svg
                   className="w-16 h-16 mx-auto"
                   fill="currentColor"

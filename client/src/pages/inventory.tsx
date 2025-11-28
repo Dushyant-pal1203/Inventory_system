@@ -535,8 +535,45 @@ export default function Inventory() {
 
   return (
     <div className="min-h-[100vh] bg-background p-[20px] sm:p-0 sm:min-h-[80.6vh]">
-      {/* Header */}
-      <div className="bg-primary text-primary-foreground py-6 px-4 shadow-md fixed top-0 left-0 w-full z-10">
+      {/* ---------- HEADER ---------- */}
+      <div className="w-full  tems-center justify-between gap-4 fixed top-[60px] left-0 !z-10">
+        <div className="max-w-6xl mx-auto ">
+          <nav className="!z-10">
+            <ul className="flex items-center justify-end space-x-4 mt-2">
+              <li className="!z-10">
+                <Button onClick={() => (window.location.href = "/")}>
+                  Home
+                </Button>
+              </li>
+              <li className="!z-10">
+                <Button
+                  variant="outline"
+                  onClick={() => (window.location.href = "/inventory")}
+                  className="text-primary !border-primary"
+                >
+                  Inventory
+                </Button>
+              </li>
+              <li className="!z-10">
+                <Button onClick={() => (window.location.href = "/invoice")}>
+                  Invoice
+                </Button>
+              </li>
+              <li className="!z-10">
+                <Button onClick={() => (window.location.href = "/bills")}>
+                  Bills
+                </Button>
+              </li>
+              <li className="!z-10">
+                <Button onClick={() => (window.location.href = "/contact_us")}>
+                  Contact Us
+                </Button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+      <div className="bg-primary text-primary-foreground py-2 px-4 shadow-md fixed top-0 left-0 w-full z-10">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <Button
             variant="ghost"
@@ -556,7 +593,7 @@ export default function Inventory() {
             <img
               src="images/logo.png"
               alt="Logo"
-              className="w-[50px] h-[45px]"
+              className="w-[65px] h-[55px]"
             />
           </div>
           <h1 className="text-2xl md:text-3xl font-bold">
@@ -565,12 +602,15 @@ export default function Inventory() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto space-y-10 mt-[110px]">
+      {/* ---------- MAIN CONTENT ---------- */}
+
+      <div className="max-w-6xl mx-auto space-y-10 mt-[120px]">
         {/* Add New Medicines */}
         <Card>
           <CardHeader>
             <CardTitle>Add New Medicines</CardTitle>
           </CardHeader>
+
           <CardContent className="space-y-6">
             {rows.map((row, index) => (
               <div
@@ -579,7 +619,7 @@ export default function Inventory() {
               >
                 <div>
                   <Label htmlFor={`name-${index}`}>
-                    Name <span className="text-red-600">*</span>
+                    Name <span className="text-secondary">*</span>
                   </Label>
                   <Input
                     id={`name-${index}`}
@@ -607,7 +647,7 @@ export default function Inventory() {
 
                 <div>
                   <Label htmlFor={`price-${index}`}>
-                    Price <span className="text-red-600">*</span>
+                    Price <span className="text-secondary">*</span>
                   </Label>
                   <Input
                     id={`price-${index}`}
@@ -625,7 +665,7 @@ export default function Inventory() {
 
                 <div>
                   <Label htmlFor={`quantity-${index}`}>
-                    Quantity <span className="text-red-600">*</span>
+                    Quantity <span className="text-secondary">*</span>
                   </Label>
                   <Input
                     id={`quantity-${index}`}
@@ -660,7 +700,7 @@ export default function Inventory() {
                 <Button
                   variant="outline"
                   onClick={handleAddRow}
-                  className="hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
+                  className="hover:bg-primary hover:text-white text-primary !border-primary"
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Row
                 </Button>
@@ -668,7 +708,7 @@ export default function Inventory() {
                 {/* CSV Upload Button */}
                 <Button
                   variant="destructive"
-                  className="hover:bg-gray-100 hover:border-red-600 hover:text-red-600 text-white"
+                  className="hover:bg-gray-100 hover:border-secondary hover:text-secondary text-white"
                   onClick={handleUploadCsvClick}
                   disabled={uploading}
                 >
@@ -818,7 +858,7 @@ export default function Inventory() {
                                       onClick={() =>
                                         handleSaveEdit(medicine.id)
                                       }
-                                      className="hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
+                                      className="hover:bg-primary hover:text-white text-primary !border-primary"
                                     >
                                       <Save className="h-4 w-4 mr-1" />
                                     </Button>
@@ -826,7 +866,7 @@ export default function Inventory() {
                                       variant="destructive"
                                       size="sm"
                                       onClick={handleCancelEdit}
-                                      className="hover:bg-gray-100 hover:border-red-600 hover:text-red-600 text-white"
+                                      className="hover:bg-gray-100 hover:border-secondary hover:text-secondary text-white"
                                     >
                                       <Undo2 className="h-4 w-4 mr-1" />
                                     </Button>
@@ -837,7 +877,7 @@ export default function Inventory() {
                                       variant="outline"
                                       size="sm"
                                       onClick={() => handleEditClick(medicine)}
-                                      className="hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
+                                      className="hover:bg-primary hover:text-white text-primary !border-primary"
                                     >
                                       <Edit className="h-4 w-4 mr-1" />
                                     </Button>
@@ -847,7 +887,7 @@ export default function Inventory() {
                                       onClick={() =>
                                         handleDeleteClick(medicine.id)
                                       }
-                                      className="hover:bg-gray-100 hover:border-red-600 hover:text-red-600 text-white"
+                                      className="hover:bg-gray-100 hover:border-secondary hover:text-secondary text-white !z-2"
                                     >
                                       <Trash2 className="h-4 w-4 mr-1" />
                                     </Button>
@@ -876,7 +916,7 @@ export default function Inventory() {
                       size="sm"
                       onClick={handleExportCSV}
                       disabled={exporting || medicines.length === 0}
-                      className="flex items-center gap-1 hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
+                      className="flex items-center gap-1 hover:bg-primary hover:text-white text-primary !border-primary"
                     >
                       <Upload className="h-4 w-4 mr-2" />
                       {exporting ? "Exporting..." : "Export CSV"}
@@ -888,7 +928,7 @@ export default function Inventory() {
                           size="sm"
                           onClick={() => handlePageChange(currentPage - 1)}
                           disabled={currentPage === 1}
-                          className="flex items-center gap-1 hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
+                          className="flex items-center gap-1 hover:bg-primary hover:text-white text-primary !border-primary"
                         >
                           <ChevronLeft className="h-4 w-4" />
                           Previous
@@ -931,7 +971,7 @@ export default function Inventory() {
                           size="sm"
                           onClick={() => handlePageChange(currentPage + 1)}
                           disabled={currentPage === totalPages}
-                          className="flex items-center gap-1 hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
+                          className="flex items-center gap-1 hover:bg-primary hover:text-white text-primary !border-primary"
                         >
                           Next
                           <ChevronRight className="h-4 w-4" />

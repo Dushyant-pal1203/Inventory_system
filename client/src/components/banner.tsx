@@ -1,3 +1,5 @@
+import { Headphones } from "lucide-react";
+
 const Banner = () => {
   return (
     <div className="w-full bg-[#0c3c78] text-white">
@@ -45,7 +47,7 @@ const Banner = () => {
         }}
       >
         {/* Title box */}
-        <div className="bg-primary bg-opacity-70 px-2 py-2 sm:py-4 rounded-lg text-center text-black w-full sm:w-[90%] md:w-[70%] lg:w-[60%] xl:w-[50%]">
+        <div className="bg-primary bg-opacity-70 px-2 py-2 sm:py-4 rounded-tl-3xl rounded-br-3xl text-center text-white w-full sm:w-[90%] md:w-[70%] lg:w-[60%] xl:w-[50%]">
           <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold">
             MALKANI HOSPITAL OF ELECTROHOMEOPATHY{" "}
             <br className="hidden sm:block" />& RESEARCH CENTRE
@@ -58,13 +60,24 @@ const Banner = () => {
       </div>
 
       {/* BOTTOM HELPLINE SECTION */}
-      <div className="relative bg-primary p-2 sm:p-3 text-center">
-        <span className="font-bold text-white text-sm sm:text-lg">
-          Helpline & Appointment :{" "}
-        </span>
-        <span className="text-white font-semibold text-sm sm:text-base">
-          9868236474, 8860100079
-        </span>
+      <div className="relative bg-secondary p-2 sm:p-3 text-center flex flex-col sm:flex-row items-center justify-center gap-2">
+        <div
+          onClick={() => {
+            window.location.href = "/contact_us";
+          }}
+          className="hidden sm:block cursor-pointer"
+        >
+          {" "}
+          <Headphones className="w-10 h-10" color="#ABDEEC" />
+        </div>
+        <div>
+          <span className="font-bold text-white text-sm sm:text-lg">
+            Helpline & Appointment :{" "}
+          </span>
+          <span className="text-white font-semibold text-sm sm:text-base">
+            9868236474, 8860100079
+          </span>
+        </div>
       </div>
     </div>
   );

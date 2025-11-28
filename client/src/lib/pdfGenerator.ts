@@ -39,11 +39,13 @@ export async function generateInvoicePDF(data: InvoiceData) {
   let yPosition = 20;
 
   // Colors
-  const primaryGreen: [number, number, number] = [34, 139, 34];
-  const lightGray: [number, number, number] = [240, 240, 240];
+  const tealBlue: [number, number, number] = [2, 116, 132];
+  const lightGray: [number, number, number] = [211, 211, 211];
   const black: [number, number, number] = [0, 0, 0];
-  const grayText: [number, number, number] = [200, 200, 200];
   const white: [number, number, number] = [255, 255, 255];
+  const darkGray: [number, number, number] = [105, 105, 105];
+  // const primaryGreen: [number, number, number] = [34, 139, 34];
+  // const grayText: [number, number, number] = [200, 200, 200];
 
   const logoBase64 = await getLogoBase64();
 
@@ -56,7 +58,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
   const addFooter = () => {
     const footerY = pageHeight - 15;
 
-    doc.setFillColor(...primaryGreen);
+    doc.setFillColor(...tealBlue);
     doc.rect(0, footerY, pageWidth, 15, "F");
 
     doc.setTextColor(...white);
@@ -73,7 +75,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
   // ---------------------------------
   const addPageHeader = (isFirstPage: boolean = false) => {
     if (isFirstPage) {
-      doc.setFillColor(...primaryGreen);
+      doc.setFillColor(...tealBlue);
       doc.roundedRect(0, 0, pageWidth, 40, 0, 0, "F");
 
       if (logoBase64) {
@@ -129,7 +131,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.setTextColor(...grayText);
+  doc.setTextColor(...darkGray);
   doc.text("BILL TO:", leftColumnX, yPosition);
 
   doc.setFont("helvetica", "normal");
@@ -149,7 +151,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.setTextColor(...grayText);
+  doc.setTextColor(...darkGray);
   doc.text("Bill No:", rightColumnX, yPosition);
 
   doc.setFont("helvetica", "bold");
@@ -157,7 +159,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
   doc.text(data.billNumber, rightColumnX + 33, yPosition);
 
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(...grayText);
+  doc.setTextColor(...darkGray);
   doc.text("Issue Date:", rightColumnX, yPosition + 6);
 
   doc.setFont("helvetica", "bold");
@@ -165,11 +167,11 @@ export async function generateInvoicePDF(data: InvoiceData) {
   doc.text(data.issueDate, rightColumnX + 33, yPosition + 6);
 
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(...grayText);
+  doc.setTextColor(...darkGray);
   doc.text("Total Amount Due:", rightColumnX, yPosition + 12);
 
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...primaryGreen);
+  doc.setTextColor(...tealBlue);
   doc.text(
     `Rs. ${data.totalDue.toFixed(2)}`,
     rightColumnX + 50,
@@ -180,7 +182,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
   // TABLE HEADER
   yPosition += 25;
 
-  doc.setFillColor(...primaryGreen);
+  doc.setFillColor(...tealBlue);
   doc.rect(15, yPosition, pageWidth - 30, 8, "F");
 
   doc.setFont("helvetica", "bold");
@@ -206,7 +208,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
       yPosition = 20;
       addPageHeader(false);
 
-      doc.setFillColor(...primaryGreen);
+      doc.setFillColor(...tealBlue);
       doc.rect(15, yPosition, pageWidth - 30, 8, "F");
 
       doc.setFont("helvetica", "bold");
@@ -280,7 +282,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
 
   yPosition += 8;
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...primaryGreen);
+  doc.setTextColor(...tealBlue);
   doc.text("Total Due", summaryX, yPosition);
   doc.text(`Rs. ${data.totalDue.toFixed(2)}`, pageWidth - 30, yPosition, {
     align: "right",
@@ -310,7 +312,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
   yPosition += 5;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.setTextColor(...grayText);
+  doc.setTextColor(...darkGray);
   doc.text("Bank, BHIM #, PhonePe, Google Pay, NetBanking", 20, yPosition);
 
   yPosition += 10;
@@ -322,7 +324,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
   yPosition += 5;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.setTextColor(...grayText);
+  doc.setTextColor(...darkGray);
   doc.text("Goods once sold will not be returned.", 20, yPosition);
 
   yPosition += 4;
@@ -348,12 +350,12 @@ export async function generateInvoicePDF(data: InvoiceData) {
   yPosition += 5;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.setTextColor(...grayText);
+  doc.setTextColor(...darkGray);
   doc.text("Authorized Signer", pageWidth - 50, yPosition);
 
   yPosition += 4;
   doc.setFontSize(9);
-  doc.setTextColor(...grayText);
+  doc.setTextColor(...darkGray);
   doc.text("Thank you for your time & business!", pageWidth / 2, yPosition, {
     align: "center",
   });

@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Eye,
   FileText,
+  Search,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -23,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
+import "./bill.css";
 
 interface Bill {
   id: string;
@@ -485,283 +487,336 @@ export default function Bills() {
 
   return (
     <>
-      {/* Header */}
-      <div className="bg-primary text-primary-foreground py-6 px-4 shadow-md fixed top-0 left-0 w-full z-10">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-          <Button
-            variant="ghost"
-            onClick={handleBack}
-            data-testid="button-back"
-            className="text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground/10"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            Back
-          </Button>
-          <div
-            onClick={() => {
-              window.location.href = "/";
-            }}
-            className="hidden sm:block cursor-pointer"
-          >
-            <img
-              src="images/logo.png"
-              alt="Logo"
-              className="w-[50px] h-[45px]"
-            />
-          </div>
-          <h1 className="text-2xl md:text-3xl font-bold">Bills Management</h1>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="pt-24 pb-8 px-4 min-h-[95.5vh] bg-background">
-        <div className="max-w-6xl mx-auto space-y-6 mt-6">
-          {/* Bills Table Card */}
-          <Card>
-            <CardHeader className="flex-row items-center justify-between">
-              <CardTitle>Bills Records</CardTitle>
-              <div className="flex gap-4">
-                <div className="flex flex-col sm:flex-row gap-4 items-center">
-                  <Button
-                    variant="destructive"
-                    onClick={handleUploadCsvClick}
-                    disabled={uploading}
-                    className="hover:bg-gray-100 hover:border-red-600 hover:text-red-600 text-white"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    {uploading ? "Uploading..." : "Upload CSV"}
+      <div className="min-h-[100vh] bg-background p-[20px] sm:p-0 sm:min-h-[80.6vh]">
+        {/* Header */}
+        <div className="w-full  tems-center justify-between gap-4 fixed top-[60px] left-0 !z-10">
+          <div className="max-w-6xl mx-auto ">
+            <nav>
+              <ul className="flex items-center justify-end space-x-4 mt-2">
+                <li>
+                  <Button onClick={() => (window.location.href = "/")}>
+                    Home
                   </Button>
-                  <Input
-                    id="bills-csv-upload"
-                    type="file"
-                    accept=".csv"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                </div>
-                {/* Export button for when there's only one page */}
-                {totalPages <= 1 && bills.length > 0 && (
-                  <div className="">
+                </li>
+                <li>
+                  <Button onClick={() => (window.location.href = "/inventory")}>
+                    Inventory
+                  </Button>
+                </li>
+                <li>
+                  <Button onClick={() => (window.location.href = "/invoice")}>
+                    Invoice
+                  </Button>
+                </li>
+                <li>
+                  <Button
+                    variant="outline"
+                    onClick={() => (window.location.href = "/bills")}
+                    className="text-primary !border-primary"
+                  >
+                    Bills
+                  </Button>
+                </li>
+                <li>
+                  <Button
+                    onClick={() => (window.location.href = "/contact_us")}
+                  >
+                    Contact Us
+                  </Button>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <div className="bg-primary text-primary-foreground py-2 px-4 shadow-md fixed top-0 left-0 w-full z-10">
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+            <Button
+              variant="ghost"
+              onClick={handleBack}
+              data-testid="button-back"
+              className="text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground/10"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              Back
+            </Button>
+            <div
+              onClick={() => {
+                window.location.href = "/";
+              }}
+              className="hidden sm:block cursor-pointer"
+            >
+              <img
+                src="images/logo.png"
+                alt="Logo"
+                className="w-[65px] h-[55px]"
+              />
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold">Bills Management</h1>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="pt-24 pb-8 px-4 min-h-[95.5vh] bg-background">
+          <div className="max-w-6xl mx-auto space-y-6 mt-6">
+            {/* Bills Table Card */}
+            <Card>
+              <CardHeader className="flex-row items-center justify-between">
+                <CardTitle>Bills Records</CardTitle>
+                <div className="flex gap-4">
+                  <div className="flex flex-col sm:flex-row gap-4 items-center">
                     <Button
-                      variant="outline"
-                      onClick={handleExportCSV}
-                      disabled={exporting}
-                      className="flex items-center gap-1 hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
+                      variant="destructive"
+                      onClick={handleUploadCsvClick}
+                      disabled={uploading}
+                      className="hover:bg-gray-100 hover:border-secondary hover:text-secondary text-white"
                     >
-                      <Download className="h-4 w-4 mr-2" />
-                      {exporting ? "Exporting..." : "Export CSV"}
+                      <Upload className="h-4 w-4 mr-2" />
+                      {uploading ? "Uploading..." : "Upload CSV"}
                     </Button>
+                    <Input
+                      id="bills-csv-upload"
+                      type="file"
+                      accept=".csv"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
                   </div>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">Loading bills...</p>
-                </div>
-              ) : bills.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">No bills found.</p>
-                </div>
-              ) : (
-                <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm border">
-                      <thead className="bg-muted">
-                        <tr>
-                          <th className="p-3 text-left">Bill Number</th>
-                          <th className="p-3 text-left">Customer Name</th>
-                          <th className="p-3 text-left">Date</th>
-                          <th className="p-3 text-right">Total Amount</th>
-                          <th className="p-3 text-left">Items Count</th>
-                          <th className="p-3 text-left">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {currentBills.map((bill) => (
-                          <tr
-                            key={bill.id}
-                            className="border-b hover:bg-muted/50"
-                          >
-                            <td className="p-3 font-medium">
-                              {bill.billNumber}
-                            </td>
-                            <td className="p-3">{bill.customerName}</td>
-                            <td className="p-3">{bill.date}</td>
-                            <td className="p-3 text-right">
-                              ₹{bill.totalAmount.toFixed(2)}
-                            </td>
-                            <td className="p-3">{bill.items.length} items</td>
-                            <td className="p-3">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewPDF(bill)}
-                                disabled={viewingPdf === bill.id}
-                                className="flex items-center gap-1 hover:bg-blue-600 hover:text-white text-blue-600 !border-blue-600"
-                              >
-                                {viewingPdf === bill.id ? (
-                                  <FileText className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Eye className="h-4 w-4" />
-                                )}
-                                {viewingPdf === bill.id
-                                  ? "Generating..."
-                                  : "View PDF"}
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Pagination and Export */}
-                  {totalPages > 1 && (
-                    <div className="flex items-center justify-between mt-6">
-                      <div className="text-sm text-muted-foreground">
-                        Showing {startIndex + 1} to{" "}
-                        {Math.min(startIndex + itemsPerPage, bills.length)} of{" "}
-                        {bills.length} bills
-                      </div>
-
-                      <div className="flex items-center gap-4">
-                        {/* Export CSV Button */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleExportCSV}
-                          disabled={exporting || bills.length === 0}
-                          className="flex items-center gap-1 hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          {exporting ? "Exporting..." : "Export CSV"}
-                        </Button>
-
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePageChange(currentPage - 1)}
-                            disabled={currentPage === 1}
-                            className="flex items-center gap-1 hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                            Previous
-                          </Button>
-
-                          <div className="flex items-center space-x-1">
-                            {renderPageNumbers().map((page, index) => {
-                              if (
-                                page === "ellipsis-start" ||
-                                page === "ellipsis-end"
-                              ) {
-                                return (
-                                  <span
-                                    key={`ellipsis-${index}`}
-                                    className="px-2 text-muted-foreground"
-                                  >
-                                    ...
-                                  </span>
-                                );
-                              }
-
-                              return (
-                                <Button
-                                  key={page}
-                                  variant={
-                                    currentPage === page ? "default" : "outline"
-                                  }
-                                  size="sm"
-                                  onClick={() =>
-                                    handlePageChange(page as number)
-                                  }
-                                  className="w-8 h-8 p-0"
-                                >
-                                  {page}
-                                </Button>
-                              );
-                            })}
-                          </div>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePageChange(currentPage + 1)}
-                            disabled={currentPage === totalPages}
-                            className="flex items-center gap-1 hover:bg-green-600 hover:text-white text-green-600 !border-green-600"
-                          >
-                            Next
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
+                  {/* Export button for when there's only one page */}
+                  {totalPages <= 1 && bills.length > 0 && (
+                    <div className="">
+                      <Button
+                        variant="outline"
+                        onClick={handleExportCSV}
+                        disabled={exporting}
+                        className="flex items-center gap-1 hover:bg-primary hover:text-white text-primary !border-primary"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        {exporting ? "Exporting..." : "Export CSV"}
+                      </Button>
                     </div>
                   )}
-                </>
-              )}
-            </CardContent>
-          </Card>
+                </div>
+              </CardHeader>
+              <div>
+                <form className="bill-search" action="">
+                  <input type="search" placeholder="Search here...." />
+                  <i className="fa fa-search">
+                    <Search />
+                  </i>
+                </form>
+              </div>
+              <CardContent>
+                {loading ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">Loading bills...</p>
+                  </div>
+                ) : bills.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">No bills found.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm border">
+                        <thead className="bg-muted">
+                          <tr>
+                            <th className="p-3 text-left">Bill Number</th>
+                            <th className="p-3 text-left">Customer Name</th>
+                            <th className="p-3 text-left">Date</th>
+                            <th className="p-3 text-right">Total Amount</th>
+                            <th className="p-3 text-left">Items Count</th>
+                            <th className="p-3 text-left">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {currentBills.map((bill) => (
+                            <tr
+                              key={bill.id}
+                              className="border-b hover:bg-muted/50"
+                            >
+                              <td className="p-3 font-medium">
+                                {bill.billNumber}
+                              </td>
+                              <td className="p-3">{bill.customerName}</td>
+                              <td className="p-3">{bill.date}</td>
+                              <td className="p-3 text-right">
+                                ₹{bill.totalAmount.toFixed(2)}
+                              </td>
+                              <td className="p-3">{bill.items.length} items</td>
+                              <td className="p-3">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleViewPDF(bill)}
+                                  disabled={viewingPdf === bill.id}
+                                  className="flex items-center gap-1 hover:bg-primary hover:text-white text-primary !border-primary"
+                                >
+                                  {viewingPdf === bill.id ? (
+                                    <FileText className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Eye className="h-4 w-4" />
+                                  )}
+                                  {viewingPdf === bill.id
+                                    ? "Generating..."
+                                    : "View PDF"}
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Pagination and Export */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between mt-6">
+                        <div className="text-sm text-muted-foreground">
+                          Showing {startIndex + 1} to{" "}
+                          {Math.min(startIndex + itemsPerPage, bills.length)} of{" "}
+                          {bills.length} bills
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                          {/* Export CSV Button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleExportCSV}
+                            disabled={exporting || bills.length === 0}
+                            className="flex items-center gap-1 hover:bg-primary hover:text-white text-primary !border-primary"
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            {exporting ? "Exporting..." : "Export CSV"}
+                          </Button>
+
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePageChange(currentPage - 1)}
+                              disabled={currentPage === 1}
+                              className="flex items-center gap-1 hover:bg-primary hover:text-white text-primary !border-primary"
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                              Previous
+                            </Button>
+
+                            <div className="flex items-center space-x-1">
+                              {renderPageNumbers().map((page, index) => {
+                                if (
+                                  page === "ellipsis-start" ||
+                                  page === "ellipsis-end"
+                                ) {
+                                  return (
+                                    <span
+                                      key={`ellipsis-${index}`}
+                                      className="px-2 text-muted-foreground"
+                                    >
+                                      ...
+                                    </span>
+                                  );
+                                }
+
+                                return (
+                                  <Button
+                                    key={page}
+                                    variant={
+                                      currentPage === page
+                                        ? "default"
+                                        : "outline"
+                                    }
+                                    size="sm"
+                                    onClick={() =>
+                                      handlePageChange(page as number)
+                                    }
+                                    className="w-8 h-8 p-0"
+                                  >
+                                    {page}
+                                  </Button>
+                                );
+                              })}
+                            </div>
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePageChange(currentPage + 1)}
+                              disabled={currentPage === totalPages}
+                              className="flex items-center gap-1 hover:bg-primary hover:text-white text-primary !border-primary"
+                            >
+                              Next
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
 
-      {/* CSV Upload Help Modal */}
-      <Dialog open={csvModalOpen} onOpenChange={setCsvModalOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Bills CSV File Format</DialogTitle>
-            <DialogDescription>
-              Please ensure your CSV file follows the correct format for
-              successful upload.
-            </DialogDescription>
-          </DialogHeader>
+        {/* CSV Upload Help Modal */}
+        <Dialog open={csvModalOpen} onOpenChange={setCsvModalOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Bills CSV File Format</DialogTitle>
+              <DialogDescription>
+                Please ensure your CSV file follows the correct format for
+                successful upload.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-            <h4 className="font-medium text-blue-800 mb-2">CSV File Format:</h4>
-            <p className="text-sm text-blue-700 mb-2">
-              Your CSV file should have the following columns:{" "}
-              <strong>billNumber, customerName, date, totalAmount</strong>{" "}
-              (items is optional)
-            </p>
-            <div className="text-xs bg-white p-2 rounded border">
-              <code>
-                billNumber,customerName,date,totalAmount
-                <br />
-                INV-001,John Doe,26/11/2024,150.75
-                <br />
-                INV-002,Jane Smith,27/11/2024,89.50
-                <br />
-                INV-003,Robert Johnson,28/11/2024,200.00
-              </code>
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+              <h4 className="font-medium text-blue-800 mb-2">
+                CSV File Format:
+              </h4>
+              <p className="text-sm text-blue-700 mb-2">
+                Your CSV file should have the following columns:{" "}
+                <strong>billNumber, customerName, date, totalAmount</strong>{" "}
+                (items is optional)
+              </p>
+              <div className="text-xs bg-white p-2 rounded border">
+                <code>
+                  billNumber,customerName,date,totalAmount
+                  <br />
+                  INV-001,John Doe,26/11/2024,150.75
+                  <br />
+                  INV-002,Jane Smith,27/11/2024,89.50
+                  <br />
+                  INV-003,Robert Johnson,28/11/2024,200.00
+                </code>
+              </div>
+              <p className="text-xs text-blue-600 mt-2">
+                Note: The items column is optional. If provided, it should be a
+                valid JSON array.
+              </p>
             </div>
-            <p className="text-xs text-blue-600 mt-2">
-              Note: The items column is optional. If provided, it should be a
-              valid JSON array.
-            </p>
-          </div>
 
-          <div className="flex items-center space-x-2 mt-4">
-            <Checkbox
-              id="bills-dont-show-again"
-              checked={dontShowAgain}
-              onCheckedChange={(checked) =>
-                setDontShowAgain(checked as boolean)
-              }
-            />
-            <Label htmlFor="bills-dont-show-again" className="text-sm">
-              Don't show this message again
-            </Label>
-          </div>
+            <div className="flex items-center space-x-2 mt-4">
+              <Checkbox
+                id="bills-dont-show-again"
+                checked={dontShowAgain}
+                onCheckedChange={(checked) =>
+                  setDontShowAgain(checked as boolean)
+                }
+              />
+              <Label htmlFor="bills-dont-show-again" className="text-sm">
+                Don't show this message again
+              </Label>
+            </div>
 
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setCsvModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCsvModalConfirm}>OK</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setCsvModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCsvModalConfirm}>OK</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </>
   );
 }
