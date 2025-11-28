@@ -1,19 +1,112 @@
+import React, { useState } from "react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import {
-  ArrowLeft,
-  MapPinHouse,
-  Mail,
-  PrinterCheck,
-  Smartphone,
-} from "lucide-react";
-import React from "react";
+import { MapPinHouse, Mail, PrinterCheck, Smartphone } from "lucide-react";
 
-const handleBack = () => {
-  window.location.href = "/";
+// Simple client-side validators
+const validateEmail = (email: string) => {
+  // basic RFC-ish check
+  return /^\S+@\S+\.\S+$/.test(email);
+};
+const validatePhone = (phone: string) => {
+  // allow + and digits and spaces/dashes, require at least 7 digits
+  const digits = phone.replace(/[^0-9]/g, "");
+  return digits.length >= 7;
 };
 
 const ContactUs = () => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [message, setMessage] = useState("");
+
+  const [statusMessage, setStatusMessage] = useState("");
+  const [statusType, setStatusType] = useState(""); // "success" | "error"
+  const [loading, setLoading] = useState(false);
+
+  const resetStatus = () => {
+    setStatusMessage("");
+    setStatusType("");
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); // keep user on same page
+    resetStatus();
+
+    // Client side validation
+    if (!name.trim()) {
+      setStatusType("error");
+      setStatusMessage("Please enter your name.");
+      return;
+    }
+    if (!validateEmail(email)) {
+      setStatusType("error");
+      setStatusMessage("Please enter a valid email address.");
+      return;
+    }
+    if (!validatePhone(phone)) {
+      setStatusType("error");
+      setStatusMessage(
+        "Please enter a valid phone number (at least 7 digits)."
+      );
+      return;
+    }
+    if (message.trim().length < 5) {
+      setStatusType("error");
+      setStatusMessage("Please enter a short message (at least 5 characters).");
+      return;
+    }
+
+    // Prepare data for FormSubmit AJAX endpoint
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("name", name);
+      formData.append("email", email);
+      formData.append("phone", phone);
+      formData.append("message", message);
+      formData.append("_subject", "New Contact Form Submission!");
+      formData.append("_template", "table");
+      // _captcha false to skip their captcha
+      formData.append("_captcha", "false");
+
+      const response = await fetch(
+        "https://formsubmit.co/ajax/yam.raj32742@gmail.com",
+        {
+          method: "POST",
+          body: formData,
+          headers: {
+            Accept: "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setStatusType("success");
+        setStatusMessage(
+          "Message sent successfully. We'll get back to you soon!"
+        );
+        // clear fields
+        setName("");
+        setEmail("");
+        setPhone("");
+        setMessage("");
+      } else {
+        setStatusType("error");
+        setStatusMessage(
+          data.message || "Something went wrong while sending the message."
+        );
+      }
+    } catch (err) {
+      setStatusType("error");
+      setStatusMessage("Network error — please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <div className="min-h-[100vh] bg-background p-[20px] sm:p-0 sm:min-h-[80.6vh]">
@@ -73,7 +166,7 @@ const ContactUs = () => {
                 </div>
               </div>
 
-              {/* FAX (optional) */}
+              {/* FAX */}
               <div className="flex flex-col items-center">
                 <div className="h-[60px]">
                   <PrinterCheck size={48} strokeWidth={1.5} color="white" />
@@ -105,30 +198,65 @@ const ContactUs = () => {
                 </h3>
                 <p className="mb-6 text-sm">AVAILABLE 24 HOURS A DAY!</p>
 
-                <form className="space-y-4">
+                {/* FORM SUBMITS VIA AJAX to stay on same page */}
+                <form className="space-y-4" onSubmit={handleSubmit}>
+                  {/* Status message placed just above submit button as requested */}
+                  {statusMessage && (
+                    <div
+                      role="status"
+                      className={`p-3 rounded-md text-sm mb-2 ${
+                        statusType === "success"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {statusMessage}
+                    </div>
+                  )}
+
                   <input
                     type="text"
+                    name="name"
                     placeholder="Enter your Name"
-                    className="w-full border border-gray-300 p-3 rounded-lg"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    className="w-full border border-gray-300 p-3 rounded-lg text-gray-700"
                   />
 
                   <input
                     type="email"
+                    name="email"
                     placeholder="Enter a valid email address"
-                    className="w-full border border-gray-300 p-3 rounded-lg"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full border border-gray-300 p-3 rounded-lg text-gray-700"
                   />
+
                   <input
-                    type="phone"
+                    type="tel"
+                    name="phone"
                     placeholder="Enter a valid phone number "
-                    className="w-full border border-gray-300 p-3 rounded-lg"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    required
+                    className="w-full border border-gray-300 p-3 rounded-lg text-gray-700"
                   />
 
                   <textarea
+                    name="message"
                     placeholder="Enter your message"
-                    className="w-full border border-gray-300 p-3 rounded-lg h-[83px]"
-                  />
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    required
+                    className="w-full border border-gray-300 p-3 rounded-lg text-gray-700 h-[83px]"
+                  ></textarea>
 
-                  <Button className="px-6">Submit</Button>
+                  {/* Use type="submit" so it behaves like a normal form submit button */}
+                  <Button type="submit" className="px-6" disabled={loading}>
+                    {loading ? "Sending..." : "Submit"}
+                  </Button>
                 </form>
               </div>
 

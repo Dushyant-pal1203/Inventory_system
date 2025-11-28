@@ -8,7 +8,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Trash2,
   Plus,
-  ArrowLeft,
   Edit,
   Save,
   Undo2,
@@ -472,10 +471,6 @@ export default function Inventory() {
     } finally {
       setExporting(false);
     }
-  };
-
-  const handleBack = () => {
-    setLocation("/");
   };
 
   // Pagination calculations

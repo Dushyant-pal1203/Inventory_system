@@ -23,7 +23,6 @@ import {
   ShoppingCart,
   Trash2,
   ArrowRight,
-  ArrowLeft,
   AlertTriangle,
 } from "lucide-react";
 import { type Medicine, type CartItem } from "@shared/schema";
@@ -207,12 +206,6 @@ export default function Home() {
   };
 
   const cartTotal = cart.reduce((sum, item) => sum + item.amount, 0);
-  const handleGoBack = () => {
-    setLocation("/");
-    {
-      window.location.reload();
-    }
-  };
 
   // Get available stock for display
   const getAvailableStock = (medicineId: string): number => {

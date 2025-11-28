@@ -5,12 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ArrowLeft,
   Upload,
   Download,
   ChevronLeft,
   ChevronRight,
-  Eye,
   FileText,
   Search,
   Trash2,
@@ -152,10 +150,6 @@ export default function Bills() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleBack = () => {
-    window.location.href = "/";
   };
 
   // Handle CSV upload button click
