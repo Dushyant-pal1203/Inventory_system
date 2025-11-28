@@ -77,7 +77,7 @@ export default function GenerateInvoice() {
   }, [setLocation, toast]);
 
   const subtotal = cart.reduce((sum, item) => sum + item.amount, 0);
-  const taxPercentage = 5;
+  const taxPercentage = 2.5;
   const taxAmount = subtotal * (taxPercentage / 100);
   const totalDue = subtotal + taxAmount;
   const totalItems = cart.length;
@@ -183,6 +183,30 @@ export default function GenerateInvoice() {
       setLocation("/");
     }
   };
+  const [errors, setErrors] = useState({
+    clientName: "",
+    clientPhone: "",
+    clientAddress: "",
+  });
+  const validateName = (name: string) => {
+    if (!name.trim()) return "Client name is required";
+    if (!/^[A-Za-z\s]+$/.test(name)) return "Name must contain only letters";
+    return "";
+  };
+
+  const validatePhone = (phone: string) => {
+    if (!phone.trim()) return "Phone number is required";
+    if (!/^\d{10}$/.test(phone))
+      return "Phone number must be exactly 10 digits";
+    return "";
+  };
+
+  const validateAddress = (address: string) => {
+    if (!address.trim()) return "Address is required";
+    if (address.trim().length < 5)
+      return "Address must be at least 5 characters";
+    return "";
+  };
 
   if (cart.length === 0 && !invoiceGenerated) {
     return (
@@ -231,40 +255,79 @@ export default function GenerateInvoice() {
                     <Label htmlFor="client-name">
                       Client Name <span className="text-secondary">*</span>
                     </Label>
+
                     <Input
                       id="client-name"
-                      data-testid="input-client-name"
                       value={clientName}
-                      onChange={(e) => setClientName(e.target.value)}
+                      onChange={(e) => {
+                        setClientName(e.target.value);
+                        setErrors((prev) => ({
+                          ...prev,
+                          clientName: validateName(e.target.value),
+                        }));
+                      }}
                       placeholder="Enter client name"
+                      className={errors.clientName ? "border-red-500" : ""}
                     />
+
+                    {errors.clientName && (
+                      <p className="text-red-500 text-sm">
+                        {errors.clientName}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="client-phone">
                       Phone Number <span className="text-secondary">*</span>
                     </Label>
+
                     <Input
                       id="client-phone"
-                      data-testid="input-client-phone"
                       value={clientPhone}
-                      onChange={(e) => setClientPhone(e.target.value)}
+                      onChange={(e) => {
+                        setClientPhone(e.target.value);
+                        setErrors((prev) => ({
+                          ...prev,
+                          clientPhone: validatePhone(e.target.value),
+                        }));
+                      }}
                       placeholder="Enter phone number"
                       type="tel"
+                      className={errors.clientPhone ? "border-red-500" : ""}
                     />
+
+                    {errors.clientPhone && (
+                      <p className="text-red-500 text-sm">
+                        {errors.clientPhone}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="client-address">
                       Address <span className="text-secondary">*</span>
                     </Label>
+
                     <Input
                       id="client-address"
-                      data-testid="input-client-address"
                       value={clientAddress}
-                      onChange={(e) => setClientAddress(e.target.value)}
+                      onChange={(e) => {
+                        setClientAddress(e.target.value);
+                        setErrors((prev) => ({
+                          ...prev,
+                          clientAddress: validateAddress(e.target.value),
+                        }));
+                      }}
                       placeholder="Enter client address"
+                      className={errors.clientAddress ? "border-red-500" : ""}
                     />
+
+                    {errors.clientAddress && (
+                      <p className="text-red-500 text-sm">
+                        {errors.clientAddress}
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -479,12 +542,14 @@ export default function GenerateInvoice() {
 
             <div className="flex justify-center mt-8">
               <Button
-                onClick={handleDownloadPDF}
                 disabled={
                   createInvoiceMutation.isPending ||
+                  !!errors.clientName ||
+                  !!errors.clientPhone ||
+                  !!errors.clientAddress ||
                   !clientName ||
-                  !clientAddress ||
-                  !clientPhone
+                  !clientPhone ||
+                  !clientAddress
                 }
                 size="lg"
                 className="px-8"

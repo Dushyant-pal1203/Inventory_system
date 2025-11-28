@@ -1,3 +1,4 @@
+import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
@@ -17,68 +18,7 @@ const ContactUs = () => {
     <>
       <div className="min-h-[100vh] bg-background p-[20px] sm:p-0 sm:min-h-[80.6vh]">
         {/* ---------- HEADER ---------- */}
-        <div className="w-full tems-center justify-between gap-4 fixed top-[60px] left-0 !z-10">
-          <div className="max-w-6xl mx-auto ">
-            <nav>
-              <ul className="flex items-center justify-end space-x-4 mt-2">
-                <li>
-                  <Button onClick={() => (window.location.href = "/")}>
-                    Home
-                  </Button>
-                </li>
-                <li>
-                  <Button onClick={() => (window.location.href = "/inventory")}>
-                    Inventory
-                  </Button>
-                </li>
-                <li>
-                  <Button onClick={() => (window.location.href = "/invoice")}>
-                    Invoice
-                  </Button>
-                </li>
-                <li>
-                  <Button onClick={() => (window.location.href = "/bills")}>
-                    Bills
-                  </Button>
-                </li>
-                <li>
-                  <Button
-                    variant="outline"
-                    onClick={() => (window.location.href = "/contact_us")}
-                    className="text-primary !border-primary"
-                  >
-                    Contact Us
-                  </Button>
-                </li>
-              </ul>
-            </nav>
-          </div>
-        </div>
-        <div className="bg-primary text-primary-foreground py-2 px-4 shadow-md fixed top-0 left-0 w-full z-10">
-          <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-            <Button
-              variant="ghost"
-              onClick={handleBack}
-              className="text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground/10"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              Back
-            </Button>
-
-            <div
-              onClick={() => (window.location.href = "/")}
-              className="hidden sm:block cursor-pointer"
-            >
-              <img
-                src="images/logo.png"
-                alt="Logo"
-                className="w-[65px] h-[55px]"
-              />
-            </div>
-
-            <h1 className="text-2xl md:text-3xl font-bold">Contact Us</h1>
-          </div>
-        </div>
+        <Navbar active="contact" title="Contact Us" />
 
         {/* ---------- MAIN CONTENT ---------- */}
         <div className="max-w-6xl mx-auto space-y-10 mt-[120px] mb-5">
@@ -128,8 +68,8 @@ const ContactUs = () => {
                 </div>
                 <div className="flex flex-col gap-1">
                   <h3 className="font-bold mb-1 text-white">PHONE NUMBER</h3>
-                  <p className="text-sm text-white">9868236474</p>
-                  <p className="text-sm text-white">8860100079</p>
+                  <p className="text-sm text-white">+91 9868236474</p>
+                  <p className="text-sm text-white">+91 8860100079</p>
                 </div>
               </div>
 
@@ -177,10 +117,15 @@ const ContactUs = () => {
                     placeholder="Enter a valid email address"
                     className="w-full border border-gray-300 p-3 rounded-lg"
                   />
+                  <input
+                    type="phone"
+                    placeholder="Enter a valid phone number "
+                    className="w-full border border-gray-300 p-3 rounded-lg"
+                  />
 
                   <textarea
                     placeholder="Enter your message"
-                    className="w-full border border-gray-300 p-3 rounded-lg h-32"
+                    className="w-full border border-gray-300 p-3 rounded-lg h-[83px]"
                   />
 
                   <Button className="px-6">Submit</Button>

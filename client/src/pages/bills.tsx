@@ -13,6 +13,7 @@ import {
   Eye,
   FileText,
   Search,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
 import "./bill.css";
+import Navbar from "@/components/Navbar";
 
 interface Bill {
   id: string;
@@ -53,6 +55,29 @@ interface BillItem {
   amount?: number;
 }
 
+// Helper function to parse CSV lines properly
+const parseCSVLine = (line: string): string[] => {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      result.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  result.push(current);
+  return result.map((field) => field.trim());
+};
+
 export default function Bills() {
   const { toast } = useToast();
   const [bills, setBills] = useState<Bill[]>([]);
@@ -60,18 +85,24 @@ export default function Bills() {
   const [uploading, setUploading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [viewingPdf, setViewingPdf] = useState<string | null>(null);
-
-  // CSV upload modal state
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
-
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+
   const itemsPerPage = 10;
 
   // Load bills from API
   useEffect(() => {
     fetchBills();
+  }, []);
+
+  // Load "Don't show again" preference
+  useEffect(() => {
+    const savedPreference = localStorage.getItem("billsCsvUploadDontShowAgain");
+    if (savedPreference === "true") {
+      setDontShowAgain(true);
+    }
   }, []);
 
   const fetchBills = async () => {
@@ -81,7 +112,6 @@ export default function Bills() {
       if (response.ok) {
         const invoices = await response.json();
 
-        // Transform invoices to bills format
         const transformedBills: Bill[] = invoices.map((invoice: any) => ({
           id: invoice.id,
           billNumber: invoice.billNumber,
@@ -100,7 +130,7 @@ export default function Bills() {
             })) || [],
           clientName: invoice.clientName,
           clientAddress: invoice.clientAddress,
-          clientPhone: invoice.clientPhone,
+          clientPhone: invoice.clientPhone || "",
           issueDate: invoice.issueDate,
           subtotal: invoice.subtotal,
           taxPercentage: invoice.taxPercentage,
@@ -123,14 +153,6 @@ export default function Bills() {
       setLoading(false);
     }
   };
-
-  // Load "Don't show again" preference from localStorage
-  useEffect(() => {
-    const savedPreference = localStorage.getItem("billsCsvUploadDontShowAgain");
-    if (savedPreference === "true") {
-      setDontShowAgain(true);
-    }
-  }, []);
 
   const handleBack = () => {
     window.location.href = "/";
@@ -163,7 +185,6 @@ export default function Bills() {
     try {
       setViewingPdf(bill.id);
 
-      // Recreate the invoice data structure for PDF generation
       const invoiceData = {
         clientName: bill.clientName || bill.customerName,
         clientAddress: bill.clientAddress || "",
@@ -180,14 +201,12 @@ export default function Bills() {
         subtotal:
           parseFloat(bill.subtotal || "0") ||
           bill.items.reduce((sum, item) => sum + item.total, 0),
-        taxPercentage: 5, // Default tax percentage
+        taxPercentage: 5,
         taxAmount: parseFloat(bill.taxAmount || "0") || 0,
         totalDue: bill.totalAmount,
       };
 
-      // Import the PDF generator dynamically to avoid circular dependencies
       const { generateInvoicePDF } = await import("@/lib/pdfGenerator");
-
       await generateInvoicePDF(invoiceData);
 
       toast({
@@ -206,7 +225,7 @@ export default function Bills() {
     }
   };
 
-  // CSV file upload handler for bills
+  // CSV file upload handler for bills - FIXED VERSION
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -239,7 +258,7 @@ export default function Bills() {
 
       const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
 
-      // Validate headers for bills
+      // Validate headers
       const requiredHeaders = [
         "billnumber",
         "customername",
@@ -265,7 +284,8 @@ export default function Bills() {
       let errorRows: string[] = [];
 
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(",").map((v) => v.trim());
+        // Use the proper CSV parser
+        const values = parseCSVLine(lines[i]);
         const billData: any = {};
 
         headers.forEach((header, index) => {
@@ -284,13 +304,16 @@ export default function Bills() {
         }
 
         const totalAmount = parseFloat(billData.totalamount);
-
         if (isNaN(totalAmount) || totalAmount < 0) {
           errorRows.push(`Row ${i + 1}: Invalid total amount`);
           continue;
         }
 
-        // Parse items if provided (optional field) - handle gracefully
+        // Handle phone number
+        const phoneNumber =
+          billData.phonenumber || billData.clientphone || billData.phone || "";
+
+        // Parse items - FIXED PARSING LOGIC
         let items: BillItem[] = [];
         if (
           billData.items &&
@@ -300,35 +323,34 @@ export default function Bills() {
           try {
             let itemsString = billData.items.trim();
 
-            // Remove surrounding quotes if present
+            // Remove any extra quotes that might be added during export
             if (itemsString.startsWith('"') && itemsString.endsWith('"')) {
               itemsString = itemsString.slice(1, -1);
             }
 
-            // Handle double-escaped JSON
+            // Handle any escaped characters
             itemsString = itemsString
               .replace(/\\"/g, '"')
               .replace(/\\\\/g, "\\");
 
-            // Try to parse as JSON
+            // Parse the JSON
             const parsedItems = JSON.parse(itemsString);
 
             if (Array.isArray(parsedItems) && parsedItems.length > 0) {
               items = parsedItems.map((item: any) => ({
-                medicineName: item.medicineName || item.medicineName || "",
+                medicineName: item.medicineName || item.name || "",
                 quantity: Number(item.quantity) || 0,
                 price: Number(item.price) || Number(item.rate) || 0,
                 total: Number(item.total) || Number(item.amount) || 0,
-                medicineId: item.medicineId || "",
+                medicineId: item.medicineId || item.id || "",
                 rate: item.rate || item.price || 0,
                 amount: item.amount || item.total || 0,
               }));
             }
           } catch (error) {
-            console.warn(
-              `Row ${i + 1}: Could not parse items, using empty array`
-            );
-            // Don't treat this as a fatal error - continue with empty items
+            console.warn(`Row ${i + 1}: Could not parse items:`, error);
+            console.warn(`Items string was:`, billData.items);
+            // Continue with empty items array
           }
         }
 
@@ -338,6 +360,7 @@ export default function Bills() {
           customerName: billData.customername,
           date: billData.date,
           totalAmount: totalAmount,
+          clientPhone: phoneNumber,
           items: items,
         });
       }
@@ -364,9 +387,7 @@ export default function Bills() {
         return;
       }
 
-      // Add imported bills to state (replace with your actual API call)
       setBills((prevBills) => [...prevBills, ...importedBills]);
-
       toast({
         title: "Success",
         description: `Successfully imported ${importedBills.length} bills from CSV file`,
@@ -384,33 +405,38 @@ export default function Bills() {
     }
   };
 
-  // Export CSV function for bills - UPDATED VERSION
+  // Export CSV function for bills - FIXED VERSION
   const handleExportCSV = async () => {
     setExporting(true);
     try {
-      // Create CSV content for bills with correct headers
       const headers = [
         "billNumber",
         "customerName",
+        "clientPhone",
         "date",
         "totalAmount",
+        "itemsCount",
         "items",
       ];
 
       const csvContent = [
         headers.join(","),
-        ...bills.map((bill) =>
-          [
-            `"${bill.billNumber.replace(/"/g, '""')}"`,
-            `"${bill.customerName.replace(/"/g, '""')}"`,
+        ...filteredBills.map((bill) => {
+          // Properly format items for CSV without extra quotes
+          const itemsString = JSON.stringify(bill.items || []);
+
+          return [
+            bill.billNumber || "",
+            bill.customerName || "",
+            bill.clientPhone || "",
             bill.date,
-            bill.totalAmount.toFixed(2),
-            `"${JSON.stringify(bill.items).replace(/"/g, '""')}"`,
-          ].join(",")
-        ),
+            (bill.totalAmount || 0).toFixed(2),
+            (bill.items || []).length.toString(),
+            itemsString, // No extra quotes here
+          ].join(",");
+        }),
       ].join("\n");
 
-      // Create and download file
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -426,7 +452,7 @@ export default function Bills() {
 
       toast({
         title: "Export Successful",
-        description: `Exported ${bills.length} bills to CSV file`,
+        description: `Exported ${filteredBills.length} bills to CSV file with items data`,
       });
     } catch (error) {
       console.error("Export error:", error);
@@ -440,19 +466,53 @@ export default function Bills() {
     }
   };
 
+  const handleDeleteBill = (id: string) => {
+    setBills((prev) => prev.filter((bill) => bill.id !== id));
+    toast({
+      title: "Deleted",
+      description: "Bill deleted successfully",
+    });
+  };
+
+  // Filtered bills for search
+  const filteredBills = bills.filter((bill) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (bill.billNumber || "").toString().toLowerCase().includes(q) ||
+      (bill.customerName || "").toString().toLowerCase().includes(q) ||
+      (bill.clientPhone || "").toString().toLowerCase().includes(q)
+    );
+  });
+
   // Pagination calculations
-  const totalPages = Math.ceil(bills.length / itemsPerPage);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredBills.length / itemsPerPage)
+  );
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentBills = bills.slice(startIndex, startIndex + itemsPerPage);
+  const currentBills = filteredBills.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [filteredBills.length, totalPages, currentPage]);
 
   const handlePageChange = (page: number) => {
+    if (page < 1) page = 1;
+    if (page > totalPages) page = totalPages;
     setCurrentPage(page);
   };
 
   const renderPageNumbers = () => {
-    const pages = [];
+    const pages: (number | string)[] = [];
     const maxVisiblePages = 3;
 
+    if (totalPages <= 1) return pages;
     pages.push(1);
 
     let startPage = Math.max(2, currentPage - 1);
@@ -478,87 +538,17 @@ export default function Bills() {
       pages.push("ellipsis-end");
     }
 
-    if (totalPages > 1) {
-      pages.push(totalPages);
-    }
-
+    pages.push(totalPages);
     return pages;
   };
 
   return (
     <>
       <div className="min-h-[100vh] bg-background p-[20px] sm:p-0 sm:min-h-[80.6vh]">
-        {/* Header */}
-        <div className="w-full  tems-center justify-between gap-4 fixed top-[60px] left-0 !z-10">
-          <div className="max-w-6xl mx-auto ">
-            <nav>
-              <ul className="flex items-center justify-end space-x-4 mt-2">
-                <li>
-                  <Button onClick={() => (window.location.href = "/")}>
-                    Home
-                  </Button>
-                </li>
-                <li>
-                  <Button onClick={() => (window.location.href = "/inventory")}>
-                    Inventory
-                  </Button>
-                </li>
-                <li>
-                  <Button onClick={() => (window.location.href = "/invoice")}>
-                    Invoice
-                  </Button>
-                </li>
-                <li>
-                  <Button
-                    variant="outline"
-                    onClick={() => (window.location.href = "/bills")}
-                    className="text-primary !border-primary"
-                  >
-                    Bills
-                  </Button>
-                </li>
-                <li>
-                  <Button
-                    onClick={() => (window.location.href = "/contact_us")}
-                  >
-                    Contact Us
-                  </Button>
-                </li>
-              </ul>
-            </nav>
-          </div>
-        </div>
-        <div className="bg-primary text-primary-foreground py-2 px-4 shadow-md fixed top-0 left-0 w-full z-10">
-          <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-            <Button
-              variant="ghost"
-              onClick={handleBack}
-              data-testid="button-back"
-              className="text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground/10"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              Back
-            </Button>
-            <div
-              onClick={() => {
-                window.location.href = "/";
-              }}
-              className="hidden sm:block cursor-pointer"
-            >
-              <img
-                src="images/logo.png"
-                alt="Logo"
-                className="w-[65px] h-[55px]"
-              />
-            </div>
-            <h1 className="text-2xl md:text-3xl font-bold">Bills Management</h1>
-          </div>
-        </div>
+        <Navbar active="bills" title="Bills Management" />
 
-        {/* Main Content */}
         <div className="pt-24 pb-8 px-4 min-h-[95.5vh] bg-background">
           <div className="max-w-6xl mx-auto space-y-6 mt-6">
-            {/* Bills Table Card */}
             <Card>
               <CardHeader className="flex-row items-center justify-between">
                 <CardTitle>Bills Records</CardTitle>
@@ -581,8 +571,7 @@ export default function Bills() {
                       className="hidden"
                     />
                   </div>
-                  {/* Export button for when there's only one page */}
-                  {totalPages <= 1 && bills.length > 0 && (
+                  {totalPages <= 1 && filteredBills.length > 0 && (
                     <div className="">
                       <Button
                         variant="outline"
@@ -597,20 +586,30 @@ export default function Bills() {
                   )}
                 </div>
               </CardHeader>
+
               <div>
                 <form className="bill-search" action="">
-                  <input type="search" placeholder="Search here...." />
+                  <input
+                    type="search"
+                    placeholder="Search here...."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                  />
                   <i className="fa fa-search">
                     <Search />
                   </i>
                 </form>
               </div>
+
               <CardContent>
                 {loading ? (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground">Loading bills...</p>
                   </div>
-                ) : bills.length === 0 ? (
+                ) : filteredBills.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground">No bills found.</p>
                   </div>
@@ -622,6 +621,7 @@ export default function Bills() {
                           <tr>
                             <th className="p-3 text-left">Bill Number</th>
                             <th className="p-3 text-left">Customer Name</th>
+                            <th className="p-3 text-left">Phone Number</th>
                             <th className="p-3 text-left">Date</th>
                             <th className="p-3 text-right">Total Amount</th>
                             <th className="p-3 text-left">Items Count</th>
@@ -638,12 +638,21 @@ export default function Bills() {
                                 {bill.billNumber}
                               </td>
                               <td className="p-3">{bill.customerName}</td>
+                              <td className="p-3">{bill.clientPhone || "—"}</td>
                               <td className="p-3">{bill.date}</td>
                               <td className="p-3 text-right">
                                 ₹{bill.totalAmount.toFixed(2)}
                               </td>
-                              <td className="p-3">{bill.items.length} items</td>
-                              <td className="p-3">
+                              <td className="p-3">{bill.items.length}</td>
+                              <td className="p-3 flex gap-2">
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleDeleteBill(bill.id)}
+                                  className="hover:bg-gray-100 hover:border-secondary hover:text-secondary text-white !z-2"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" />
+                                </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -654,11 +663,9 @@ export default function Bills() {
                                   {viewingPdf === bill.id ? (
                                     <FileText className="h-4 w-4 animate-spin" />
                                   ) : (
-                                    <Eye className="h-4 w-4" />
+                                    <FileText className="h-4 w-4 mr-1" />
                                   )}
-                                  {viewingPdf === bill.id
-                                    ? "Generating..."
-                                    : "View PDF"}
+                                  {viewingPdf === bill.id ? "..." : ""}
                                 </Button>
                               </td>
                             </tr>
@@ -667,22 +674,23 @@ export default function Bills() {
                       </table>
                     </div>
 
-                    {/* Pagination and Export */}
                     {totalPages > 1 && (
                       <div className="flex items-center justify-between mt-6">
                         <div className="text-sm text-muted-foreground">
                           Showing {startIndex + 1} to{" "}
-                          {Math.min(startIndex + itemsPerPage, bills.length)} of{" "}
-                          {bills.length} bills
+                          {Math.min(
+                            startIndex + itemsPerPage,
+                            filteredBills.length
+                          )}{" "}
+                          of {filteredBills.length} bills
                         </div>
 
                         <div className="flex items-center gap-4">
-                          {/* Export CSV Button */}
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={handleExportCSV}
-                            disabled={exporting || bills.length === 0}
+                            disabled={exporting || filteredBills.length === 0}
                             className="flex items-center gap-1 hover:bg-primary hover:text-white text-primary !border-primary"
                           >
                             <Download className="h-4 w-4 mr-2" />
@@ -785,8 +793,6 @@ export default function Bills() {
                   INV-001,John Doe,26/11/2024,150.75
                   <br />
                   INV-002,Jane Smith,27/11/2024,89.50
-                  <br />
-                  INV-003,Robert Johnson,28/11/2024,200.00
                 </code>
               </div>
               <p className="text-xs text-blue-600 mt-2">
