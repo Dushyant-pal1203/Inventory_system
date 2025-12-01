@@ -536,7 +536,7 @@ export default function Inventory() {
 
       {/* ---------- MAIN CONTENT ---------- */}
 
-      <div className="max-w-6xl mx-auto space-y-10 mt-[120px]">
+      <div className="max-w-6xl mx-auto space-y-10 mt-[125px]">
         {/* Add New Medicines */}
         <Card>
           <CardHeader>

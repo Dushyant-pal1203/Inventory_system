@@ -541,11 +541,11 @@ export default function Bills() {
         <Navbar active="bills" title="Bills Management" />
 
         <div className="pt-24 pb-8 px-4 min-h-[95.5vh] bg-background">
-          <div className="max-w-6xl mx-auto space-y-6 mt-6">
+          <div className="max-w-6xl mx-auto space-y-6 mt-7">
             <Card>
-              <CardHeader className="flex-row items-center justify-between">
+              <CardHeader className="flex md:flex-row sm:flex-col items-center justify-between">
                 <CardTitle>Bills Records</CardTitle>
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-1 sm:gap-4">
                   <div className="flex flex-col sm:flex-row gap-4 items-center">
                     <Button
                       variant="destructive"
