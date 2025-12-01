@@ -11,7 +11,6 @@ import {
   ChevronRight,
   FileText,
   Search,
-  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -639,14 +638,6 @@ export default function Bills() {
                               </td>
                               <td className="p-3">{bill.items.length}</td>
                               <td className="p-3 flex gap-2">
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => handleDeleteBill(bill.id)}
-                                  className="hover:bg-gray-100 hover:border-secondary hover:text-secondary text-white !z-2"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-1" />
-                                </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
