@@ -542,6 +542,7 @@ export default function GenerateInvoice() {
 
             <div className="flex justify-center mt-8">
               <Button
+                onClick={handleDownloadPDF}
                 disabled={
                   createInvoiceMutation.isPending ||
                   !!errors.clientName ||
