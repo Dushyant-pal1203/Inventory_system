@@ -75,7 +75,7 @@ const Banner = () => {
             Helpline & Appointment :{" "}
           </span>
           <span className="text-white font-semibold text-sm sm:text-base">
-            9868236474, 8860100079
+            +91 9868236474, +91 8860100079
           </span>
         </div>
       </div>
