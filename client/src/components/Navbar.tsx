@@ -25,30 +25,33 @@ export default function Navbar({ active, onBack, title }: NavbarProps) {
       <div className="bg-primary text-primary-foreground py-2 px-4 shadow-md fixed top-0 left-0 w-full z-20">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           {/* Back Button */}
-          <Button
-            variant="ghost"
-            onClick={onBack || (() => (window.location.href = "/"))}
-            className="text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground/10 hidden sm:flex"
-          >
-            <ArrowLeft className="h-5 w-5" /> Back
-          </Button>
-
+          <div className="w-[30%] text-left hidden sm:flex">
+            <Button
+              variant="ghost"
+              onClick={onBack || (() => (window.location.href = "/"))}
+              className="text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground/10 hidden sm:flex"
+            >
+              <ArrowLeft className="h-5 w-5" /> Back
+            </Button>
+          </div>
           {/* Logo */}
           <div
             onClick={() => (window.location.href = "/")}
-            className="hidden sm:block cursor-pointer"
+            className="hidden sm:block cursor-pointer w-[30%]  justify-items-center"
           >
             <img
               src="images/logo.png"
               alt="Logo"
-              className="w-[65px] h-[55px]"
+              className="w-[66px] h-[55px]"
             />
           </div>
 
           {/* Title */}
-          <h1 className="text-xl md:text-3xl font-bold ">
-            {title || "My Website"}
-          </h1>
+          <div className=" sm:w-[31%] text-left sm:text-right">
+            <h1 className="text-xl md:text-3xl font-bold ">
+              {title || "My Website"}
+            </h1>
+          </div>
 
           {/* Mobile Menu Button */}
           <button className="sm:hidden" onClick={() => setOpen(!open)}>
