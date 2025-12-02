@@ -68,7 +68,7 @@ export default function GenerateInvoice() {
       }
     } else {
       toast({
-        title: "No Items Found",
+        title: "Bill Generated",
         description: "Redirecting to home page",
         variant: "destructive",
       });

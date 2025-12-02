@@ -202,7 +202,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
 
   data.items.forEach((item, index) => {
     // Page break for items
-    if (yPosition > pageHeight - 120 && index < data.items.length - 1) {
+    if (yPosition > pageHeight - 50 && index < data.items.length - 1) {
       addFooter(); // <-- FOOTER HERE
       doc.addPage();
       yPosition = 20;
@@ -211,7 +211,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
       doc.setFillColor(...tealBlue);
       doc.rect(15, yPosition, pageWidth - 30, 8, "F");
 
-      doc.setFont("helvetica", "bold");
+      doc.setFont("helvetica");
       doc.setFontSize(10);
       doc.setTextColor(...white);
       doc.text("Description", 20, yPosition + 5.5);
