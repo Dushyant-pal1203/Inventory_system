@@ -109,12 +109,12 @@ const ContactUs = () => {
 
   return (
     <>
-      <div className="min-h-[100vh] bg-background p-[20px] sm:p-0 sm:min-h-[80.6vh]">
+      <div className="min-h-[100vh] bg-[#00000033] p-[20px] sm:p-0 sm:min-h-[80.6vh]">
         {/* ---------- HEADER ---------- */}
         <Navbar active="contact" title="Contact Us" />
 
         {/* ---------- MAIN CONTENT ---------- */}
-        <div className="max-w-6xl mx-auto space-y-10 mt-[120px] mb-5">
+        <div className="max-w-6xl mx-auto space-y-10 pt-10 sm:pt-[125px] pb-0 sm:pb-5">
           <div
             className=" max-w-6xl mx-auto p-4 shadcn-card rounded-3xl border bg-cover bg-center border-card-border text-card-foreground shadow-sm"
             style={{
@@ -184,7 +184,12 @@ const ContactUs = () => {
                 </div>
                 <div className="flex flex-col gap-1">
                   <h3 className="font-bold mb-1 text-white">MAIL</h3>
-                  <p className="text-sm text-white">malkani.clinic@gmail.com</p>
+                  <a
+                    href="mailto:malkani.clinic@gmail.com"
+                    className="text-sm text-white hover:underline"
+                  >
+                    malkani.clinic@gmail.com
+                  </a>
                 </div>
               </div>
             </div>

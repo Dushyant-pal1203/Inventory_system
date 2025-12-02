@@ -378,12 +378,12 @@ export default function Home(): JSX.Element {
 
   /* ----------------------------- Render UI ------------------------------ */
   return (
-    <div className="min-h-[100vh] bg-background p-[20px] sm:p-0 sm:min-h-[78.6vh]">
+    <div className="min-h-100 bg-[#00000033] p-[20px] sm:p-0 sm:min-h-[78.6vh]">
       {/* ---------- HEADER ---------- */}
       <Navbar active="invoice" title="Invoice Creation" />
 
-      <div className="justify-items-center mt-[125px]">
-        <div className="grid md:grid-cols-2 gap-6 md:gap-8">
+      <div className="justify-items-center pt-10 sm:pt-[125px] pb-0 sm:pb-[27.99vh]">
+        <div className="grid md:grid-cols-2 gap-6 md:gap-8 max-w-6xl w-[100%]">
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">Select Medicines</CardTitle>

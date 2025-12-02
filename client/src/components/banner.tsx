@@ -4,7 +4,7 @@ const Banner = () => {
   return (
     <div className="w-full bg-[#0c3c78] text-white">
       {/* TOP HEADING */}
-      <div className="w-full flex flex-col sm:flex-row items-center justify-between px-4 py-2 sm:py-4 text-center bg-primary">
+      <div className="w-full flex flex-col sm:flex-row items-center justify-between px-4 py-2 sm:py-4 text-center bg-primary rounded-t-xl">
         {/* Logo - hidden on mobile, visible on sm and up */}
         <div
           onClick={() => {
@@ -60,13 +60,13 @@ const Banner = () => {
       </div>
 
       {/* BOTTOM HELPLINE SECTION */}
-      <div className="relative bg-secondary p-2 sm:p-3 text-center flex flex-col sm:flex-row items-center justify-center gap-2">
-        <div
-          onClick={() => {
-            window.location.href = "/contact_us";
-          }}
-          className="hidden sm:block cursor-pointer"
-        >
+      <div
+        className="relative bg-secondary p-2 sm:p-3 text-center flex flex-col sm:flex-row items-center justify-center gap-2 cursor-pointer"
+        onClick={() => {
+          window.location.href = "/contact_us";
+        }}
+      >
+        <div className="hidden sm:block cursor-pointer">
           {" "}
           <Headphones className="w-10 h-10" color="#ABDEEC" />
         </div>
