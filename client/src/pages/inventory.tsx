@@ -671,11 +671,11 @@ export default function Inventory() {
 
           <CardContent>
             {loading ? (
-              <div className="text-center py-8">
+              <div className="text-center py-8 h-[26vh]">
                 <p className="text-muted-foreground">Loading medicines...</p>
               </div>
             ) : medicines.length === 0 ? (
-              <div className="text-center py-8">
+              <div className="text-center py-8 h-[26vh]">
                 <p className="text-muted-foreground">No medicines added yet.</p>
               </div>
             ) : (

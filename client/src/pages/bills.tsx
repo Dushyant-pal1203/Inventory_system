@@ -11,8 +11,9 @@ import {
   ChevronRight,
   FileText,
   Search,
+  Eraser,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast, useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -57,20 +58,33 @@ const parseCSVLine = (line: string): string[] => {
   const result: string[] = [];
   let current = "";
   let inQuotes = false;
+  let lastChar = "";
 
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
+    const nextChar = i < line.length - 1 ? line[i + 1] : "";
 
-    if (char === '"') {
+    // Handle quotes
+    if (char === '"' && lastChar !== "\\") {
       inQuotes = !inQuotes;
-    } else if (char === "," && !inQuotes) {
+      lastChar = char;
+      continue;
+    }
+
+    // Handle commas (field separators)
+    if (char === "," && !inQuotes) {
       result.push(current);
       current = "";
-    } else {
-      current += char;
+      lastChar = char;
+      continue;
     }
+
+    // Add character to current field
+    current += char;
+    lastChar = char;
   }
 
+  // Add the last field
   result.push(current);
   return result.map((field) => field.trim());
 };
@@ -102,14 +116,17 @@ export default function Bills() {
     }
   }, []);
 
+  // In your Bills.tsx, update the fetchBills function:
   const fetchBills = async () => {
     try {
       setLoading(true);
+      // Try to fetch from API first
       const response = await apiRequest("GET", "/api/invoices");
+      let apiBills: Bill[] = [];
+
       if (response.ok) {
         const invoices = await response.json();
-
-        const transformedBills: Bill[] = invoices.map((invoice: any) => ({
+        apiBills = invoices.map((invoice: any) => ({
           id: invoice.id,
           billNumber: invoice.billNumber,
           customerName: invoice.clientName,
@@ -134,11 +151,26 @@ export default function Bills() {
           taxAmount: invoice.taxAmount,
           totalDue: invoice.totalDue,
         }));
-
-        setBills(transformedBills);
-      } else {
-        throw new Error("Failed to fetch bills");
       }
+
+      // Also check localStorage for bills
+      const localStorageBills = JSON.parse(
+        localStorage.getItem("bills") || "[]"
+      );
+
+      // Merge bills, removing duplicates by billNumber
+      const allBills = [...apiBills, ...localStorageBills];
+      const uniqueBills = allBills.filter(
+        (bill, index, self) =>
+          index === self.findIndex((b) => b.billNumber === bill.billNumber)
+      );
+
+      // Sort by date (newest first)
+      uniqueBills.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+
+      setBills(uniqueBills);
     } catch (error) {
       console.error("Error fetching bills:", error);
       toast({
@@ -347,6 +379,7 @@ export default function Bills() {
           }
         }
 
+        // In your Bills.tsx, update the handleFileUpload function (inside the import loop):
         importedBills.push({
           id: `imported-${Date.now()}-${i}`,
           billNumber: billData.billnumber,
@@ -354,7 +387,12 @@ export default function Bills() {
           date: billData.date,
           totalAmount: totalAmount,
           clientPhone: phoneNumber,
+          clientAddress: billData.clientaddress || "",
           items: items,
+          subtotal: billData.subtotal || "",
+          taxPercentage: billData.taxpercentage || "",
+          taxAmount: billData.taxamount || "",
+          totalDue: billData.totaldue || totalAmount.toFixed(2),
         });
       }
 
@@ -398,7 +436,7 @@ export default function Bills() {
     }
   };
 
-  // Export CSV function for bills - FIXED VERSION
+  // In your Bills.tsx, update the handleExportCSV function:
   const handleExportCSV = async () => {
     setExporting(true);
     try {
@@ -406,26 +444,50 @@ export default function Bills() {
         "billNumber",
         "customerName",
         "clientPhone",
+        "clientAddress",
         "date",
         "totalAmount",
         "itemsCount",
         "items",
+        "subtotal",
+        "taxPercentage",
+        "taxAmount",
+        "totalDue",
       ];
 
       const csvContent = [
         headers.join(","),
         ...filteredBills.map((bill) => {
-          // Properly format items for CSV without extra quotes
+          // Properly format items for CSV
           const itemsString = JSON.stringify(bill.items || []);
 
+          // Escape quotes in strings
+          const escapeCSV = (field: any) => {
+            if (field === null || field === undefined) return "";
+            const stringField = String(field);
+            if (
+              stringField.includes(",") ||
+              stringField.includes('"') ||
+              stringField.includes("\n")
+            ) {
+              return '"' + stringField.replace(/"/g, '""') + '"';
+            }
+            return stringField;
+          };
+
           return [
-            bill.billNumber || "",
-            bill.customerName || "",
-            bill.clientPhone || "",
-            bill.date,
-            (bill.totalAmount || 0).toFixed(2),
-            (bill.items || []).length.toString(),
-            itemsString, // No extra quotes here
+            escapeCSV(bill.billNumber),
+            escapeCSV(bill.customerName),
+            escapeCSV(bill.clientPhone),
+            escapeCSV(bill.clientAddress || ""),
+            escapeCSV(bill.date),
+            escapeCSV(bill.totalAmount?.toFixed(2) || "0.00"),
+            escapeCSV((bill.items || []).length.toString()),
+            escapeCSV(itemsString), // JSON string of items
+            escapeCSV(bill.subtotal || ""),
+            escapeCSV(bill.taxPercentage || ""),
+            escapeCSV(bill.taxAmount || ""),
+            escapeCSV(bill.totalDue || bill.totalAmount?.toFixed(2) || "0.00"),
           ].join(",");
         }),
       ].join("\n");
@@ -445,7 +507,7 @@ export default function Bills() {
 
       toast({
         title: "Export Successful",
-        description: `Exported ${filteredBills.length} bills to CSV file with items data`,
+        description: `Exported ${filteredBills.length} bills to CSV file`,
       });
     } catch (error) {
       console.error("Export error:", error);
@@ -534,6 +596,19 @@ export default function Bills() {
     pages.push(totalPages);
     return pages;
   };
+  // Add this function in Bills.tsx for maintenance
+  const clearLocalStorageBills = () => {
+    if (
+      window.confirm("Are you sure you want to clear all locally stored bills?")
+    ) {
+      localStorage.removeItem("bills");
+      fetchBills(); // Refresh the list
+      toast({
+        title: "Local Storage Cleared",
+        description: "All locally stored bills have been removed",
+      });
+    }
+  };
 
   return (
     <>
@@ -544,7 +619,17 @@ export default function Bills() {
           <div className="max-w-6xl mx-auto space-y-6">
             <Card>
               <CardHeader className="flex md:flex-row sm:flex-col items-center justify-between">
-                <CardTitle>Bills Records</CardTitle>
+                <CardTitle className="flex gap-2 items-center">
+                  Bills Records
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearLocalStorageBills}
+                    className="flex items-center gap-1 hover:bg-primary hover:text-white text-primary !border-primary"
+                  >
+                    <Eraser className="h-4 w-4 mr-1" />
+                  </Button>
+                </CardTitle>
                 <div className="flex flex-col sm:flex-row gap-1 sm:gap-4">
                   <div className="flex flex-col sm:flex-row gap-4 items-center">
                     <Button
@@ -750,38 +835,68 @@ export default function Bills() {
           </div>
         </div>
 
-        {/* CSV Upload Help Modal */}
         <Dialog open={csvModalOpen} onOpenChange={setCsvModalOpen}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Bills CSV File Format</DialogTitle>
               <DialogDescription>
-                Please ensure your CSV file follows the correct format for
-                successful upload.
+                Upload CSV files exported from the Generate Invoice page or in
+                this format:
               </DialogDescription>
             </DialogHeader>
 
             <div className="mt-4 p-4 bg-blue-50 rounded-lg">
               <h4 className="font-medium text-blue-800 mb-2">
-                CSV File Format:
+                Required CSV Columns:
               </h4>
-              <p className="text-sm text-blue-700 mb-2">
-                Your CSV file should have the following columns:{" "}
-                <strong>billNumber, customerName, date, totalAmount</strong>{" "}
-                (items is optional)
-              </p>
-              <div className="text-xs bg-white p-2 rounded border">
-                <code>
-                  billNumber,customerName,date,totalAmount
-                  <br />
-                  INV-001,John Doe,26/11/2024,150.75
-                  <br />
-                  INV-002,Jane Smith,27/11/2024,89.50
+              <div className="text-xs bg-white p-2 rounded border overflow-x-auto">
+                <code className="text-xs whitespace-pre">
+                  {`billNumber,customerName,clientPhone,clientAddress,date,totalAmount,items
+INV-1001,John Doe,9876543210,"123 Street, City",01/12/2024,150.75,[{\"medicineName\":\"Medicine 1\",\"quantity\":2,\"price\":50,\"total\":100},{\"medicineName\":\"Medicine 2\",\"quantity\":1,\"price\":50.75,\"total\":50.75}]
+INV-1002,Jane Smith,9876543211,"456 Avenue, City",02/12/2024,89.50,[{\"medicineName\":\"Medicine 3\",\"quantity\":1,\"price\":89.50,\"total\":89.50}]`}
                 </code>
               </div>
-              <p className="text-xs text-blue-600 mt-2">
-                Note: The items column is optional. If provided, it should be a
-                valid JSON array.
+
+              <div className="mt-4">
+                <h4 className="font-medium text-blue-800 mb-2">
+                  Optional Columns:
+                </h4>
+                <p className="text-sm text-blue-700">
+                  You can also include:{" "}
+                  <strong>
+                    subtotal, taxPercentage, taxAmount, totalDue, itemsCount
+                  </strong>
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <h4 className="font-medium mb-2">Data Shown in Bills Table:</h4>
+              <ul className="text-sm space-y-1 list-disc pl-5">
+                <li>
+                  <strong>Bill Number:</strong> From generate_invoice.tsx
+                  (INV-xxxx)
+                </li>
+                <li>
+                  <strong>Customer Name:</strong> Client name entered
+                </li>
+                <li>
+                  <strong>Phone Number:</strong> Client phone number
+                </li>
+                <li>
+                  <strong>Date:</strong> Issue date (dd/mm/yyyy)
+                </li>
+                <li>
+                  <strong>Total Amount:</strong> Final amount including tax
+                </li>
+                <li>
+                  <strong>Items Count:</strong> Number of medicines in the
+                  invoice
+                </li>
+              </ul>
+              <p className="text-sm text-muted-foreground mt-2">
+                Full details including address and individual items are stored
+                and can be viewed in PDF.
               </p>
             </div>
 
@@ -802,7 +917,7 @@ export default function Bills() {
               <Button variant="outline" onClick={() => setCsvModalOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleCsvModalConfirm}>OK</Button>
+              <Button onClick={handleCsvModalConfirm}>Upload CSV</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
