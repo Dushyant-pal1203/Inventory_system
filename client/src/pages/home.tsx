@@ -15,7 +15,7 @@ export default function Home() {
   return (
     <>
       <Banner />
-      <div className="bg-background flex items-center justify-center px-4 py-4 min-h-[49.2vh]">
+      <div className="bg-[#00000033] flex items-center justify-center px-4 py-4 min-h-[49.2vh]">
         <div className="max-w-4xl w-full grid md:grid-cols-2 gap-6 justify-items-center">
           {/* Inventory Option */}
           <Card

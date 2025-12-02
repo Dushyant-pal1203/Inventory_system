@@ -71,7 +71,9 @@ export default function Navbar({ active, onBack, title }: NavbarProps) {
                     onClick={() => (window.location.href = item.href)}
                     variant={active === item.key ? "outline" : "default"}
                     className={
-                      active === item.key ? "text-primary !border-primary" : ""
+                      active === item.key
+                        ? "text-primary !border-primary bg-white"
+                        : ""
                     }
                   >
                     {item.label}

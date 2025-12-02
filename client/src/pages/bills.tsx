@@ -537,11 +537,11 @@ export default function Bills() {
 
   return (
     <>
-      <div className="min-h-[100vh] bg-background p-[20px] sm:p-0 sm:min-h-[80.6vh]">
+      <div className="min-h-[100vh] bg-[#00000033] p-[20px] sm:p-0 sm:min-h-[80.6vh]">
         <Navbar active="bills" title="Bills Management" />
 
-        <div className="pt-24 pb-8 px-4 min-h-[95.5vh] bg-background">
-          <div className="max-w-6xl mx-auto space-y-6 mt-7">
+        <div className="pt-10 sm:pt-[125px] pb-8 px-4 min-h-[95.5vh] ">
+          <div className="max-w-6xl mx-auto space-y-6">
             <Card>
               <CardHeader className="flex md:flex-row sm:flex-col items-center justify-between">
                 <CardTitle>Bills Records</CardTitle>
@@ -660,7 +660,7 @@ export default function Bills() {
                     </div>
 
                     {totalPages > 1 && (
-                      <div className="flex items-center justify-between mt-6">
+                      <div className="flex  flex-col sm:flex-row gap-1 items-center justify-between mt-6">
                         <div className="text-sm text-muted-foreground">
                           Showing {startIndex + 1} to{" "}
                           {Math.min(
@@ -669,19 +669,18 @@ export default function Bills() {
                           )}{" "}
                           of {filteredBills.length} bills
                         </div>
-
+                        {/* Export CSV Button */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleExportCSV}
+                          disabled={exporting || filteredBills.length === 0}
+                          className="flex items-center gap-1 hover:bg-primary hover:text-white text-primary !border-primary"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          {exporting ? "Exporting..." : "Export CSV"}
+                        </Button>
                         <div className="flex items-center gap-4">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleExportCSV}
-                            disabled={exporting || filteredBills.length === 0}
-                            className="flex items-center gap-1 hover:bg-primary hover:text-white text-primary !border-primary"
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            {exporting ? "Exporting..." : "Export CSV"}
-                          </Button>
-
                           <div className="flex items-center space-x-2">
                             <Button
                               variant="outline"

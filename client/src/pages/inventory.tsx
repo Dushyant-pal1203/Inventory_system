@@ -530,13 +530,13 @@ export default function Inventory() {
   };
 
   return (
-    <div className="min-h-[100vh] bg-background p-[20px] sm:p-0 sm:min-h-[80.6vh]">
+    <div className="min-h-[100vh] bg-[#00000033] p-[20px] sm:p-0 sm:min-h-[80.6vh]">
       {/* ---------- HEADER ---------- */}
       <Navbar active="inventory" title="Inventory Management" />
 
       {/* ---------- MAIN CONTENT ---------- */}
 
-      <div className="max-w-6xl mx-auto space-y-10 mt-[125px]">
+      <div className="max-w-6xl mx-auto space-y-10 pt-10 sm:pt-[125px] pb-0- sm:pb-4">
         {/* Add New Medicines */}
         <Card>
           <CardHeader>
@@ -836,7 +836,7 @@ export default function Inventory() {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-between mt-6">
+                  <div className="flex flex-col sm:flex-row gap-1 items-center justify-between mt-6">
                     <div className="text-sm text-muted-foreground">
                       Showing {startIndex + 1} to{" "}
                       {Math.min(startIndex + itemsPerPage, medicines.length)} of{" "}
