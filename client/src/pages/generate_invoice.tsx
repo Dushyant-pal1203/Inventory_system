@@ -88,7 +88,7 @@ export default function GenerateInvoice() {
     year: "numeric",
   });
 
-  // In your generate_invoice.tsx, update the handleDownloadPDF function:
+  // In generate_invoice.tsx, update the handleDownloadPDF function:
   const handleDownloadPDF = async () => {
     if (!clientName || !clientAddress || !clientPhone) {
       toast({
@@ -144,6 +144,35 @@ export default function GenerateInvoice() {
         taxAmount,
         totalDue,
       });
+
+      // NEW: Save to localStorage for Bills component
+      const billRecord = {
+        id: savedInvoice.id,
+        billNumber,
+        customerName: clientName,
+        clientPhone,
+        date: issueDate,
+        totalAmount: totalDue,
+        items: cart.map((item) => ({
+          medicineName: item.medicineName,
+          quantity: item.quantity,
+          price: item.rate,
+          total: item.amount,
+          medicineId: item.medicineId,
+          rate: item.rate,
+          amount: item.amount,
+        })),
+        clientName,
+        clientAddress,
+        issueDate,
+        subtotal: subtotal.toString(),
+        taxPercentage: taxPercentage.toString(),
+        taxAmount: taxAmount.toString(),
+        totalDue: totalDue.toString(),
+      };
+      const existingBills = JSON.parse(localStorage.getItem("bills") || "[]");
+      existingBills.push(billRecord);
+      localStorage.setItem("bills", JSON.stringify(existingBills));
 
       setInvoiceGenerated(true);
 
