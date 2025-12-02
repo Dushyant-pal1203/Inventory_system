@@ -53,7 +53,6 @@ interface BillItem {
   amount?: number;
 }
 
-// Helper function to parse CSV lines properly
 const parseCSVLine = (line: string): string[] => {
   const result: string[] = [];
   let current = "";
@@ -64,14 +63,12 @@ const parseCSVLine = (line: string): string[] => {
     const char = line[i];
     const nextChar = i < line.length - 1 ? line[i + 1] : "";
 
-    // Handle quotes
     if (char === '"' && lastChar !== "\\") {
       inQuotes = !inQuotes;
       lastChar = char;
       continue;
     }
 
-    // Handle commas (field separators)
     if (char === "," && !inQuotes) {
       result.push(current);
       current = "";
@@ -79,12 +76,10 @@ const parseCSVLine = (line: string): string[] => {
       continue;
     }
 
-    // Add character to current field
     current += char;
     lastChar = char;
   }
 
-  // Add the last field
   result.push(current);
   return result.map((field) => field.trim());
 };
@@ -116,11 +111,9 @@ export default function Bills() {
     }
   }, []);
 
-  // In your Bills.tsx, update the fetchBills function:
   const fetchBills = async () => {
     try {
       setLoading(true);
-      // Try to fetch from API first
       const response = await apiRequest("GET", "/api/invoices");
       let apiBills: Bill[] = [];
 
@@ -153,19 +146,16 @@ export default function Bills() {
         }));
       }
 
-      // Also check localStorage for bills
       const localStorageBills = JSON.parse(
         localStorage.getItem("bills") || "[]"
       );
 
-      // Merge bills, removing duplicates by billNumber
       const allBills = [...apiBills, ...localStorageBills];
       const uniqueBills = allBills.filter(
         (bill, index, self) =>
           index === self.findIndex((b) => b.billNumber === bill.billNumber)
       );
 
-      // Sort by date (newest first)
       uniqueBills.sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
       );
@@ -250,7 +240,7 @@ export default function Bills() {
     }
   };
 
-  // CSV file upload handler for bills - FIXED VERSION
+  // CSV file upload handler for bills
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -375,11 +365,9 @@ export default function Bills() {
           } catch (error) {
             console.warn(`Row ${i + 1}: Could not parse items:`, error);
             console.warn(`Items string was:`, billData.items);
-            // Continue with empty items array
           }
         }
 
-        // In your Bills.tsx, update the handleFileUpload function (inside the import loop):
         importedBills.push({
           id: `imported-${Date.now()}-${i}`,
           billNumber: billData.billnumber,
@@ -436,7 +424,6 @@ export default function Bills() {
     }
   };
 
-  // In your Bills.tsx, update the handleExportCSV function:
   const handleExportCSV = async () => {
     setExporting(true);
     try {
@@ -483,7 +470,7 @@ export default function Bills() {
             escapeCSV(bill.date),
             escapeCSV(bill.totalAmount?.toFixed(2) || "0.00"),
             escapeCSV((bill.items || []).length.toString()),
-            escapeCSV(itemsString), // JSON string of items
+            escapeCSV(itemsString),
             escapeCSV(bill.subtotal || ""),
             escapeCSV(bill.taxPercentage || ""),
             escapeCSV(bill.taxAmount || ""),
@@ -519,14 +506,6 @@ export default function Bills() {
     } finally {
       setExporting(false);
     }
-  };
-
-  const handleDeleteBill = (id: string) => {
-    setBills((prev) => prev.filter((bill) => bill.id !== id));
-    toast({
-      title: "Deleted",
-      description: "Bill deleted successfully",
-    });
   };
 
   // Filtered bills for search
@@ -596,13 +575,13 @@ export default function Bills() {
     pages.push(totalPages);
     return pages;
   };
-  // Add this function in Bills.tsx for maintenance
+
   const clearLocalStorageBills = () => {
     if (
       window.confirm("Are you sure you want to clear all locally stored bills?")
     ) {
       localStorage.removeItem("bills");
-      fetchBills(); // Refresh the list
+      fetchBills();
       toast({
         title: "Local Storage Cleared",
         description: "All locally stored bills have been removed",

@@ -21,7 +21,7 @@ const ContactUs = () => {
   const [message, setMessage] = useState("");
 
   const [statusMessage, setStatusMessage] = useState("");
-  const [statusType, setStatusType] = useState(""); // "success" | "error"
+  const [statusType, setStatusType] = useState("");
   const [loading, setLoading] = useState(false);
 
   const resetStatus = () => {
@@ -30,10 +30,9 @@ const ContactUs = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); // keep user on same page
+    e.preventDefault();
     resetStatus();
 
-    // Client side validation
     if (!name.trim()) {
       setStatusType("error");
       setStatusMessage("Please enter your name.");
@@ -67,7 +66,6 @@ const ContactUs = () => {
       formData.append("message", message);
       formData.append("_subject", "New Contact Form Submission!");
       formData.append("_template", "table");
-      // _captcha false to skip their captcha
       formData.append("_captcha", "false");
 
       const response = await fetch(
@@ -88,7 +86,6 @@ const ContactUs = () => {
         setStatusMessage(
           "Message sent successfully. We'll get back to you soon!"
         );
-        // clear fields
         setName("");
         setEmail("");
         setPhone("");
@@ -203,9 +200,7 @@ const ContactUs = () => {
                 </h3>
                 <p className="mb-6 text-sm">AVAILABLE 24 HOURS A DAY!</p>
 
-                {/* FORM SUBMITS VIA AJAX to stay on same page */}
                 <form className="space-y-4" onSubmit={handleSubmit}>
-                  {/* Status message placed just above submit button as requested */}
                   {statusMessage && (
                     <div
                       role="status"
@@ -258,7 +253,6 @@ const ContactUs = () => {
                     className="w-full border border-gray-300 p-3 rounded-lg text-gray-700 h-[83px]"
                   ></textarea>
 
-                  {/* Use type="submit" so it behaves like a normal form submit button */}
                   <Button type="submit" className="px-6" disabled={loading}>
                     {loading ? "Sending..." : "Submit"}
                   </Button>

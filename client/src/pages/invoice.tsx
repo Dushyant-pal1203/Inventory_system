@@ -51,14 +51,14 @@ function useOnClickOutside<T extends HTMLElement>(
 
 const SimplePopover: React.FC<{
   triggerLabel: string;
-  children: (close: () => void) => React.ReactNode; // <--- updated
+  children: (close: () => void) => React.ReactNode;
   className?: string;
 }> = ({ triggerLabel, children, className }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
   useOnClickOutside(ref, () => setOpen(false));
 
-  const close = () => setOpen(false); // <--- add this
+  const close = () => setOpen(false);
 
   return (
     <div className={`relative inline-block ${className ?? ""}`} ref={ref}>
@@ -78,7 +78,7 @@ const SimplePopover: React.FC<{
           aria-modal="false"
           className="absolute z-50 mt-2 w-[320px] max-h-[340px] overflow-auto rounded-md border bg-white shadow-lg"
         >
-          {children(close)} {/* <--- Pass close function */}
+          {children(close)}
         </div>
       )}
     </div>
@@ -170,10 +170,7 @@ export default function Home(): JSX.Element {
 
   /* ---------------------- Autocomplete suggestion list ------------------- */
   const suggestionRef = useRef<HTMLDivElement | null>(null);
-  useOnClickOutside(suggestionRef, () => {
-    // close suggestions by clearing search if it's empty OR keep text but hide suggestions
-    // we'll hide by clearing an internal visible flag; simpler: we rely on conditional render below
-  });
+  useOnClickOutside(suggestionRef, () => {});
 
   // Filter medicines for suggestions: by name includes searchText (case-ins)
   const suggestions =
@@ -360,11 +357,6 @@ export default function Home(): JSX.Element {
 
   const cartTotal = cart.reduce((sum, item) => sum + item.amount, 0);
 
-  const handleGoBack = () => {
-    setLocation("/");
-    window.location.reload();
-  };
-
   // Get available stock for display
   const getAvailableStock = (medicineId: string): number => {
     const medicine = medicines?.find((m) => m.id === medicineId);
@@ -413,8 +405,6 @@ export default function Home(): JSX.Element {
                         if (exact) {
                           setSelectedMedicineId(exact.id);
                         } else {
-                          // otherwise don't automatically clear selectedMedicineId,
-                          // keep selection until user picks new or clears input
                         }
                       }}
                       className="w-full"
@@ -432,7 +422,7 @@ export default function Home(): JSX.Element {
                               onSelect={(m) => {
                                 setSelectedMedicineId(m.id);
                                 setSearchText(m.name);
-                                setShowSuggestions(false); // close
+                                setShowSuggestions(false);
                               }}
                             />
                           </div>
@@ -464,7 +454,7 @@ export default function Home(): JSX.Element {
                             onSelect={(m) => {
                               setSelectedMedicineId(m.id);
                               setSearchText(m.name);
-                              close(); // <--- Close dropdown automatically
+                              close();
                             }}
                           />
                         </div>
