@@ -77,7 +77,7 @@ export default function GenerateInvoice() {
   }, [setLocation, toast]);
 
   const subtotal = cart.reduce((sum, item) => sum + item.amount, 0);
-  const taxPercentage = 2.5;
+  const taxPercentage = 5;
   const taxAmount = subtotal * (taxPercentage / 100);
   const totalDue = subtotal + taxAmount;
   const totalItems = cart.length;
