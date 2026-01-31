@@ -88,7 +88,6 @@ export default function GenerateInvoice() {
     year: "numeric",
   });
 
-  // In generate_invoice.tsx, update the handleDownloadPDF function:
   const handleDownloadPDF = async () => {
     if (!clientName || !clientAddress || !clientPhone) {
       toast({
@@ -145,7 +144,7 @@ export default function GenerateInvoice() {
         totalDue,
       });
 
-      // NEW: Save to localStorage for Bills component
+      // Save to localStorage for Bills component
       const billRecord = {
         id: savedInvoice.id,
         billNumber,
@@ -205,10 +204,8 @@ export default function GenerateInvoice() {
 
   const handleGoBack = () => {
     if (!invoiceGenerated) {
-      // If invoice hasn't been generated yet, just go back
       setLocation("/invoice");
     } else {
-      // If invoice was generated, go to home
       setLocation("/");
     }
   };
@@ -362,7 +359,7 @@ export default function GenerateInvoice() {
               </CardContent>
             </Card>
 
-            {/* Your existing invoice preview component */}
+            {/* Preview component */}
             <Card id="invoice-preview">
               <div className="bg-primary text-primary-foreground px-6 py-8 rounded-t-xl">
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">

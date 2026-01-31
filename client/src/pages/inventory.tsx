@@ -249,10 +249,8 @@ export default function Inventory() {
   // Handle CSV upload button click
   const handleUploadCsvClick = () => {
     if (dontShowAgain) {
-      // If "Don't show again" is checked, directly trigger file input
       document.getElementById("csv-upload")?.click();
     } else {
-      // Otherwise, show the modal
       setCsvModalOpen(true);
     }
   };
@@ -335,7 +333,7 @@ export default function Inventory() {
         // Validate required fields
         if (!medicine.name || !medicine.price || !medicine.quantity) {
           errorRows.push(`Row ${i + 1}: Missing required fields`);
-          continue; // Skip to next row
+          continue;
         }
 
         const price = parseFloat(medicine.price);
@@ -491,32 +489,21 @@ export default function Inventory() {
 
     // Always show first page
     pages.push(1);
-
-    // Calculate start and end of visible page range
     let startPage = Math.max(2, currentPage - 1);
     let endPage = Math.min(totalPages - 1, currentPage + 1);
 
-    // Adjust if we're near the start
     if (currentPage <= 2) {
       endPage = Math.min(totalPages - 1, maxVisiblePages);
     }
-
-    // Adjust if we're near the end
     if (currentPage >= totalPages - 1) {
       startPage = Math.max(2, totalPages - maxVisiblePages + 1);
     }
-
-    // Add ellipsis after first page if needed
     if (startPage > 2) {
       pages.push("ellipsis-start");
     }
-
-    // Add middle pages
     for (let i = startPage; i <= endPage; i++) {
       pages.push(i);
     }
-
-    // Add ellipsis before last page if needed
     if (endPage < totalPages - 1) {
       pages.push("ellipsis-end");
     }
