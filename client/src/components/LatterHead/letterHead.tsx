@@ -101,7 +101,7 @@ const LetterHead: React.FC = () => {
         {/* Watermark */}
         <div className="watermark absolute inset-0 flex items-center justify-center pointer-events-none">
           <img
-            src="/public/favicon.png"
+            src="images/logo.png"
             alt="Watermark"
             className="w-[800px] opacity-5 grayscale"
             onError={(e) => {
@@ -118,7 +118,7 @@ const LetterHead: React.FC = () => {
 
           <div className="logo-container rounded-full w-32 h-32 md:w-36 md:h-36 flex items-center justify-center shadow-lg border-3 border-gold relative  mx-auto md:mx-0">
             <img
-              src="/public/favicon.png"
+              src="images/logo.png"
               alt="Malkani Health Logo"
               className="w-28 h-auto"
               onError={(e) => {
@@ -342,3 +342,4 @@ const LetterHead: React.FC = () => {
 };
 
 export default LetterHead;
+
