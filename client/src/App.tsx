@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/home";
 import Invoice from "@/pages/invoice";
+import Letter_Head from "@/pages/letter_head";
 import NotFound from "@/pages/not-found";
 import Inventory from "./pages/inventory";
 import GenerateInvoice from "./pages/generate_invoice";
@@ -18,6 +19,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/invoice" component={Invoice} />
+      <Route path="/letter_head" component={Letter_Head} />
       <Route path="/inventory" component={Inventory} />
       <Route path="/generate-invoice" component={GenerateInvoice} />
       <Route path="/bills" component={Bills} />

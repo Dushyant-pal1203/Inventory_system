@@ -32,11 +32,18 @@ const Banner = () => {
         </h1>
 
         {/* Doctor image - hidden on mobile, visible on sm and up */}
-        <img
-          src="images/doctor.png"
-          alt="Doctor"
-          className="hidden sm:block w-[80px] md:w-[110px] h-fit"
-        />
+        <div
+          onClick={() => {
+            window.location.href = "/letter_head";
+          }}
+          className="hidden sm:block cursor-pointer"
+        >
+          <img
+            src="images/doctor.png"
+            alt="Doctor"
+            className="hidden sm:block w-[80px] md:w-[110px] h-fit"
+          />
+        </div>
       </div>
 
       {/* MIDDLE BANNER SECTION */}
