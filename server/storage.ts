@@ -12,7 +12,7 @@ export interface IStorage {
   createMedicine(medicine: InsertMedicine): Promise<Medicine>;
   updateMedicine(
     id: string,
-    updates: Partial<InsertMedicine>
+    updates: Partial<InsertMedicine>,
   ): Promise<Medicine | undefined>;
   deleteMedicine(id: string): Promise<boolean>;
   createInvoice(invoice: InsertInvoice): Promise<Invoice>;
@@ -20,11 +20,11 @@ export interface IStorage {
   getAllInvoices(): Promise<Invoice[]>;
   updateMedicineStock(
     id: string,
-    quantityChange: number
+    quantityChange: number,
   ): Promise<Medicine | undefined>;
   validateStockAvailability(
     medicineId: string,
-    requestedQuantity: number
+    requestedQuantity: number,
   ): Promise<boolean>;
 }
 
@@ -65,7 +65,7 @@ export class MemStorage implements IStorage {
 
   async getAllMedicines(): Promise<Medicine[]> {
     return Array.from(this.medicines.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
+      a.name.localeCompare(b.name),
     );
   }
 
@@ -83,7 +83,7 @@ export class MemStorage implements IStorage {
     };
     this.medicines.set(id, medicine);
     console.log(
-      `Medicine created: ${medicine.name} with stock: ${medicine.stockQuantity}`
+      `Medicine created: ${medicine.name} with stock: ${medicine.stockQuantity}`,
     );
     return medicine;
   }
@@ -115,10 +115,12 @@ export class MemStorage implements IStorage {
           ? insertInvoice.totalDue
           : String(insertInvoice.totalDue),
       createdAt: new Date(),
+      discountPercentage: null,
+      discountAmount: null,
     };
     this.invoices.set(id, invoice);
     console.log(
-      `Invoice created: ${invoice.billNumber} with ${invoice.items.length} items`
+      `Invoice created: ${invoice.billNumber} with ${invoice.items.length} items`,
     );
     return invoice;
   }
@@ -130,7 +132,7 @@ export class MemStorage implements IStorage {
   async getAllInvoices(): Promise<Invoice[]> {
     return Array.from(this.invoices.values()).sort(
       (a, b) =>
-        new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
+        new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime(),
     );
   }
 
@@ -144,7 +146,7 @@ export class MemStorage implements IStorage {
 
   async updateMedicine(
     id: string,
-    updates: Partial<InsertMedicine>
+    updates: Partial<InsertMedicine>,
   ): Promise<Medicine | undefined> {
     const existing = this.medicines.get(id);
     if (!existing) return undefined;
@@ -157,7 +159,7 @@ export class MemStorage implements IStorage {
 
     this.medicines.set(id, updatedMedicine);
     console.log(
-      `Medicine updated: ${updatedMedicine.name}, stock: ${updatedMedicine.stockQuantity}`
+      `Medicine updated: ${updatedMedicine.name}, stock: ${updatedMedicine.stockQuantity}`,
     );
     return updatedMedicine;
   }
@@ -165,7 +167,7 @@ export class MemStorage implements IStorage {
   // Validate stock availability
   async validateStockAvailability(
     medicineId: string,
-    requestedQuantity: number
+    requestedQuantity: number,
   ): Promise<boolean> {
     const medicine = await this.getMedicine(medicineId);
     if (!medicine) {
@@ -175,7 +177,7 @@ export class MemStorage implements IStorage {
 
     const isValid = medicine.stockQuantity >= requestedQuantity;
     console.log(
-      `Stock validation for ${medicine.name}: Available=${medicine.stockQuantity}, Requested=${requestedQuantity}, Valid=${isValid}`
+      `Stock validation for ${medicine.name}: Available=${medicine.stockQuantity}, Requested=${requestedQuantity}, Valid=${isValid}`,
     );
 
     return isValid;
@@ -184,7 +186,7 @@ export class MemStorage implements IStorage {
   // Update medicine stock
   async updateMedicineStock(
     id: string,
-    quantityChange: number
+    quantityChange: number,
   ): Promise<Medicine | undefined> {
     const existing = this.medicines.get(id);
     if (!existing) {
@@ -195,13 +197,13 @@ export class MemStorage implements IStorage {
     console.log(
       `Updating stock for ${existing.name}: ${
         existing.stockQuantity
-      } + (${quantityChange}) = ${existing.stockQuantity + quantityChange}`
+      } + (${quantityChange}) = ${existing.stockQuantity + quantityChange}`,
     );
 
     const newStockQuantity = existing.stockQuantity + quantityChange;
     if (newStockQuantity < 0) {
       console.log(
-        `Insufficient stock for ${existing.name}: Current=${existing.stockQuantity}, Change=${quantityChange}`
+        `Insufficient stock for ${existing.name}: Current=${existing.stockQuantity}, Change=${quantityChange}`,
       );
       throw new Error("Insufficient stock");
     }
@@ -216,7 +218,7 @@ export class MemStorage implements IStorage {
     // Verify the update
     const verified = this.medicines.get(id);
     console.log(
-      `Stock update verified: ${verified?.name} = ${verified?.stockQuantity}`
+      `Stock update verified: ${verified?.name} = ${verified?.stockQuantity}`,
     );
 
     return updatedMedicine;
