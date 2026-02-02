@@ -28,7 +28,7 @@ import Navbar from "@/components/Navbar";
 
 function useOnClickOutside<T extends HTMLElement>(
   ref: React.RefObject<T>,
-  handler: (e: MouseEvent | TouchEvent) => void
+  handler: (e: MouseEvent | TouchEvent) => void,
 ) {
   useEffect(() => {
     const listener = (event: MouseEvent | TouchEvent) => {
@@ -76,7 +76,7 @@ const SimplePopover: React.FC<{
         <div
           role="dialog"
           aria-modal="false"
-          className="absolute z-50 mt-2 w-[320px] max-h-[340px] overflow-auto rounded-md border bg-white shadow-lg"
+          className="absolute z-10 mt-2 w-[320px] max-h-[340px] overflow-auto rounded-md border bg-white shadow-lg left-[-780%] md:left-[-900%]"
         >
           {children(close)}
         </div>
@@ -176,7 +176,7 @@ export default function Home(): JSX.Element {
   const suggestions =
     searchText.trim().length > 0 && medicines
       ? medicines.filter((m) =>
-          m.name.toLowerCase().includes(searchText.trim().toLowerCase())
+          m.name.toLowerCase().includes(searchText.trim().toLowerCase()),
         )
       : [];
 
@@ -225,7 +225,7 @@ export default function Home(): JSX.Element {
     }
 
     const existingItemIndex = cart.findIndex(
-      (item) => item.medicineId === selectedMedicineId
+      (item) => item.medicineId === selectedMedicineId,
     );
 
     if (existingItemIndex >= 0) {
@@ -271,7 +271,7 @@ export default function Home(): JSX.Element {
 
     // Clear stock errors for this medicine
     setStockErrors((prev) =>
-      prev.filter((error) => error.medicineId !== selectedMedicineId)
+      prev.filter((error) => error.medicineId !== selectedMedicineId),
     );
 
     // reset selection and quantity
@@ -284,7 +284,7 @@ export default function Home(): JSX.Element {
     setCart(cart.filter((item) => item.medicineId !== medicineId));
     // Clear stock error when item is removed
     setStockErrors((prev) =>
-      prev.filter((error) => error.medicineId !== medicineId)
+      prev.filter((error) => error.medicineId !== medicineId),
     );
     toast({
       title: "Removed",
@@ -400,7 +400,7 @@ export default function Home(): JSX.Element {
                         setShowSuggestions(true);
                         // If the input exactly matches a medicine name, set selection
                         const exact = medicines?.find(
-                          (m) => m.name.toLowerCase() === value.toLowerCase()
+                          (m) => m.name.toLowerCase() === value.toLowerCase(),
                         );
                         if (exact) {
                           setSelectedMedicineId(exact.id);

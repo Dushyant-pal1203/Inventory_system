@@ -57,6 +57,15 @@ export const invoices = pgTable("invoices", {
     scale: 2,
   }).notNull(),
   taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).notNull(),
+  // Add discount fields here
+  discountPercentage: decimal("discount_percentage", {
+    precision: 5,
+    scale: 2,
+  }).default("0"),
+  discountAmount: decimal("discount_amount", {
+    precision: 10,
+    scale: 2,
+  }).default("0"),
   totalDue: decimal("total_due", { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -73,6 +82,9 @@ export const insertInvoiceSchema = z.object({
   subtotal: z.string(),
   taxPercentage: z.string(),
   taxAmount: z.string(),
+  // Add discount fields to the insert schema
+  discountPercentage: z.string().optional(),
+  discountAmount: z.string().optional(),
   totalDue: z.string(),
 });
 

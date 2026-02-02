@@ -1,7 +1,3 @@
-/* LetterHead.css */
-
-
-/* Custom classes for Tailwind compatibility */
 .border-3 {
     border-width: 3px;
 }
@@ -83,6 +79,13 @@
     opacity: 0.7;
 }
 
+/* detail-line  */
+.detail-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 /* Sub-header */
 .sub-header {
     background: linear-gradient(to right, var(--adi-50), #ffffff);
@@ -130,23 +133,17 @@
     }
 }
 
-/* Responsive styles */
-@media (max-width: 768px) {
-    .letterhead-container {
-        margin: 0;
+/* In your LetterHead.css file */
+@media print {
+
+    input::placeholder,
+    textarea::placeholder {
+        color: transparent !important;
     }
 
-    .header {
-        grid-template-columns: 1fr;
-        text-align: center;
-        padding: 20px;
-    }
-
-    .logo-container {
-        margin: 0 auto;
-    }
-
-    .letter-content {
-        padding: 20px;
+    /* Or if you want to hide empty inputs entirely */
+    input:empty::before,
+    textarea:empty::before {
+        content: '' !important;
     }
 }
