@@ -25,7 +25,14 @@ export default function GenerateInvoice() {
   const [clientName, setClientName] = useState("");
   const [clientAddress, setClientAddress] = useState("");
   const [clientPhone, setClientPhone] = useState("");
+  const [discountPercentage, setDiscountPercentage] = useState<string>("0");
   const [invoiceGenerated, setInvoiceGenerated] = useState(false);
+  const [errors, setErrors] = useState({
+    clientName: "",
+    clientPhone: "",
+    clientAddress: "",
+    discountPercentage: "",
+  });
 
   const createInvoiceMutation = useMutation({
     mutationFn: async (invoiceData: InsertInvoice) => {
@@ -76,10 +83,16 @@ export default function GenerateInvoice() {
     }
   }, [setLocation, toast]);
 
+  // Calculate invoice amounts
   const subtotal = cart.reduce((sum, item) => sum + item.amount, 0);
   const taxPercentage = 5;
   const taxAmount = subtotal * (taxPercentage / 100);
-  const totalDue = subtotal + taxAmount;
+
+  // Calculate discount
+  const discountValue = parseFloat(discountPercentage) || 0;
+  const discountAmount = subtotal * (discountValue / 100);
+  const totalDue = subtotal + taxAmount - discountAmount;
+
   const totalItems = cart.length;
   const billNumber = `INV-${Date.now()}`;
   const issueDate = new Date().toLocaleDateString("en-IN", {
@@ -88,7 +101,59 @@ export default function GenerateInvoice() {
     year: "numeric",
   });
 
+  // Validation functions
+  const validateName = (name: string) => {
+    if (!name.trim()) return "Client name is required";
+    if (!/^[A-Za-z\s]+$/.test(name)) return "Name must contain only letters";
+    return "";
+  };
+
+  const validatePhone = (phone: string) => {
+    if (!phone.trim()) return "Phone number is required";
+    if (!/^\d{10}$/.test(phone))
+      return "Phone number must be exactly 10 digits";
+    return "";
+  };
+
+  const validateAddress = (address: string) => {
+    if (!address.trim()) return "Address is required";
+    if (address.trim().length < 5)
+      return "Address must be at least 5 characters";
+    return "";
+  };
+
+  const validateDiscount = (discount: string) => {
+    if (discount === "") return "";
+    const value = parseFloat(discount);
+    if (isNaN(value)) return "Discount must be a number";
+    if (value < 0) return "Discount cannot be negative";
+    if (value > 100) return "Discount cannot exceed 100%";
+    return "";
+  };
+
   const handleDownloadPDF = async () => {
+    // Validate all fields
+    const nameError = validateName(clientName);
+    const phoneError = validatePhone(clientPhone);
+    const addressError = validateAddress(clientAddress);
+    const discountError = validateDiscount(discountPercentage);
+
+    setErrors({
+      clientName: nameError,
+      clientPhone: phoneError,
+      clientAddress: addressError,
+      discountPercentage: discountError,
+    });
+
+    if (nameError || phoneError || addressError || discountError) {
+      toast({
+        title: "Validation Error",
+        description: "Please fix all errors before generating invoice",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!clientName || !clientAddress || !clientPhone) {
       toast({
         title: "Missing Information",
@@ -116,6 +181,7 @@ export default function GenerateInvoice() {
         subtotal: subtotal.toString(),
         taxPercentage: taxPercentage.toString(),
         taxAmount: taxAmount.toString(),
+        discountAmount: discountAmount.toString(),
         totalDue: totalDue.toString(),
       };
 
@@ -141,6 +207,8 @@ export default function GenerateInvoice() {
         subtotal,
         taxPercentage,
         taxAmount,
+        discountPercentage: discountValue,
+        discountAmount,
         totalDue,
       });
 
@@ -167,6 +235,8 @@ export default function GenerateInvoice() {
         subtotal: subtotal.toString(),
         taxPercentage: taxPercentage.toString(),
         taxAmount: taxAmount.toString(),
+        discountPercentage: discountValue.toString(),
+        discountAmount: discountAmount.toString(),
         totalDue: totalDue.toString(),
       };
       const existingBills = JSON.parse(localStorage.getItem("bills") || "[]");
@@ -208,30 +278,6 @@ export default function GenerateInvoice() {
     } else {
       setLocation("/");
     }
-  };
-  const [errors, setErrors] = useState({
-    clientName: "",
-    clientPhone: "",
-    clientAddress: "",
-  });
-  const validateName = (name: string) => {
-    if (!name.trim()) return "Client name is required";
-    if (!/^[A-Za-z\s]+$/.test(name)) return "Name must contain only letters";
-    return "";
-  };
-
-  const validatePhone = (phone: string) => {
-    if (!phone.trim()) return "Phone number is required";
-    if (!/^\d{10}$/.test(phone))
-      return "Phone number must be exactly 10 digits";
-    return "";
-  };
-
-  const validateAddress = (address: string) => {
-    if (!address.trim()) return "Address is required";
-    if (address.trim().length < 5)
-      return "Address must be at least 5 characters";
-    return "";
   };
 
   if (cart.length === 0 && !invoiceGenerated) {
@@ -276,12 +322,11 @@ export default function GenerateInvoice() {
                 <CardTitle>Client Details</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid md:grid-cols-3 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="client-name">
                       Client Name <span className="text-secondary">*</span>
                     </Label>
-
                     <Input
                       id="client-name"
                       value={clientName}
@@ -295,7 +340,6 @@ export default function GenerateInvoice() {
                       placeholder="Enter client name"
                       className={errors.clientName ? "border-red-500" : ""}
                     />
-
                     {errors.clientName && (
                       <p className="text-red-500 text-sm">
                         {errors.clientName}
@@ -307,7 +351,6 @@ export default function GenerateInvoice() {
                     <Label htmlFor="client-phone">
                       Phone Number <span className="text-secondary">*</span>
                     </Label>
-
                     <Input
                       id="client-phone"
                       value={clientPhone}
@@ -322,7 +365,6 @@ export default function GenerateInvoice() {
                       type="tel"
                       className={errors.clientPhone ? "border-red-500" : ""}
                     />
-
                     {errors.clientPhone && (
                       <p className="text-red-500 text-sm">
                         {errors.clientPhone}
@@ -330,11 +372,40 @@ export default function GenerateInvoice() {
                     )}
                   </div>
 
-                  <div className="space-y-2 md:col-span-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="discount">Discount (%)</Label>
+                    <Input
+                      id="discount"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={discountPercentage}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setDiscountPercentage(value);
+                        setErrors((prev) => ({
+                          ...prev,
+                          discountPercentage: validateDiscount(value),
+                        }));
+                      }}
+                      placeholder="Enter discount percentage"
+                      className={`w-full ${errors.discountPercentage ? "border-red-500" : ""}`}
+                    />
+                    {errors.discountPercentage && (
+                      <p className="text-red-500 text-sm">
+                        {errors.discountPercentage}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Enter 0-100% discount
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 md:col-span-3">
                     <Label htmlFor="client-address">
                       Address <span className="text-secondary">*</span>
                     </Label>
-
                     <Input
                       id="client-address"
                       value={clientAddress}
@@ -348,7 +419,6 @@ export default function GenerateInvoice() {
                       placeholder="Enter client address"
                       className={errors.clientAddress ? "border-red-500" : ""}
                     />
-
                     {errors.clientAddress && (
                       <p className="text-red-500 text-sm">
                         {errors.clientAddress}
@@ -498,6 +568,19 @@ export default function GenerateInvoice() {
                         ₹{subtotal.toFixed(2)}
                       </span>
                     </div>
+
+                    {/* Discount Row */}
+                    {discountValue > 0 && (
+                      <div className="flex justify-between items-center pb-2 text-green-600">
+                        <span className="text-muted-foreground">
+                          Discount ({discountValue}%)
+                        </span>
+                        <span className="font-medium">
+                          -₹{discountAmount.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+
                     <div className="flex justify-between items-center pb-2">
                       <span className="text-muted-foreground">
                         Tax {taxPercentage}%
@@ -574,6 +657,7 @@ export default function GenerateInvoice() {
                   !!errors.clientName ||
                   !!errors.clientPhone ||
                   !!errors.clientAddress ||
+                  !!errors.discountPercentage ||
                   !clientName ||
                   !clientPhone ||
                   !clientAddress

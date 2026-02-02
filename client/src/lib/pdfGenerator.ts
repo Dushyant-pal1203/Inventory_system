@@ -11,6 +11,8 @@ interface InvoiceData {
   subtotal: number;
   taxPercentage: number;
   taxAmount: number;
+  discountPercentage: number;
+  discountAmount: number;
   totalDue: number;
 }
 
@@ -44,8 +46,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
   const black: [number, number, number] = [0, 0, 0];
   const white: [number, number, number] = [255, 255, 255];
   const darkGray: [number, number, number] = [105, 105, 105];
-  // const primaryGreen: [number, number, number] = [34, 139, 34];
-  // const grayText: [number, number, number] = [200, 200, 200];
+  const discountGreen: [number, number, number] = [0, 128, 0]; // Green color for discount
 
   const logoBase64 = await getLogoBase64();
 
@@ -116,7 +117,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
           (pageWidth - 80) / 2,
           (pageHeight - 80) / 2,
           80,
-          70
+          70,
         );
         doc.restoreGraphicsState();
       } catch {}
@@ -176,7 +177,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
     `Rs. ${data.totalDue.toFixed(2)}`,
     rightColumnX + 50,
     yPosition + 12,
-    { align: "right" }
+    { align: "right" },
   );
 
   // TABLE HEADER
@@ -256,7 +257,7 @@ export async function generateInvoicePDF(data: InvoiceData) {
 
   // SUMMARY
   yPosition += 10;
-  const summaryX = pageWidth - 70;
+  const summaryX = pageWidth - 90;
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
@@ -273,6 +274,22 @@ export async function generateInvoicePDF(data: InvoiceData) {
   doc.text(`Rs. ${data.subtotal.toFixed(2)}`, pageWidth - 30, yPosition, {
     align: "right",
   });
+
+  // Add Discount line if discount exists
+  if (data.discountPercentage > 0) {
+    yPosition += 6;
+    doc.setTextColor(...discountGreen);
+    doc.text(`Discount (${data.discountPercentage}%)`, summaryX, yPosition);
+    doc.text(
+      `- Rs. ${data.discountAmount.toFixed(2)}`,
+      pageWidth - 30,
+      yPosition,
+      {
+        align: "right",
+      },
+    );
+    doc.setTextColor(...black);
+  }
 
   yPosition += 6;
   doc.text(`Tax ${data.taxPercentage}%`, summaryX, yPosition);
@@ -331,14 +348,14 @@ export async function generateInvoicePDF(data: InvoiceData) {
   doc.text(
     "All disputes shall be subject to Delhi jurisdiction",
     20,
-    yPosition
+    yPosition,
   );
 
   yPosition += 4;
   doc.text(
     "Please feel free to contact us in case of any question you may have!",
     20,
-    yPosition
+    yPosition,
   );
 
   yPosition += 8;
