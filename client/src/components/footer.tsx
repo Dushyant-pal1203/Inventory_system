@@ -12,17 +12,17 @@ const Footer = () => {
         </a>
         |
         <a
-          href="tel:+919839239874"
+          href="tel:+919868236474"
           className="text-sm text-white hover:underline"
         >
-          +91-9839239874
+          +91-9868236474
         </a>
         |
         <a
-          href="tel:+919839239874"
+          href="tel:+918860100079"
           className="text-sm text-white hover:underline"
         >
-          +91-8800100378
+          +91-8860100079
         </a>
         |
         <a
